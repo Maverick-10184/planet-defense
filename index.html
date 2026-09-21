@@ -1,0 +1,3601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Planet Defense — Base Prototype</title>
+<style>
+  :root{
+    --bg:#070912;
+    --panel:#10131f;
+    --panel2:#161a2a;
+    --accent:#4fd6c0;
+    --accent2:#c084fc;
+    --gold:#ffd166;
+    --gem:#7dd3fc;
+    --danger:#ff5c73;
+    --text:#e8eaf5;
+    --muted:#8a8fa8;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:#000; color:var(--text);
+    font-family:'Segoe UI',Roboto,system-ui,sans-serif;
+    overflow:hidden;
+  }
+  #phone{
+    width:100%; max-width:480px; height:100%; margin:0 auto;
+    background:var(--bg); position:relative;
+    display:flex; flex-direction:column;
+    box-shadow:0 0 40px rgba(0,0,0,.6);
+  }
+  .screen{
+    display:none; flex-direction:column; flex:1; min-height:0;
+  }
+  .screen.active{ display:flex; }
+  .scroll{ overflow-y:auto; padding:16px 16px 90px; flex:1; }
+
+  /* ---- top status bar (shown on non-battle screens) ---- */
+  .topBar{
+    display:flex; align-items:center; gap:16px;
+    padding:10px 14px; background:var(--panel2); border-bottom:1px solid #1f2436;
+    font-size:13px; flex-shrink:0;
+  }
+  .topBar .stat{ display:flex; align-items:center; gap:5px; font-weight:700; }
+  .topBar .coin{ color:var(--gold); }
+  .topBar .gem{ color:var(--gem); }
+  .topBar .prestige{ color:var(--accent2); }
+
+  h1{ font-size:19px; margin:4px 0 2px; }
+  h2{ font-size:16px; margin:0 0 4px; }
+  h3{
+    font-size:11px; text-transform:uppercase; letter-spacing:1px;
+    color:var(--muted); margin:18px 0 8px; border-bottom:1px solid #1f2436; padding-bottom:6px;
+  }
+  h3:first-child{ margin-top:0; }
+  p.sub{ color:var(--muted); font-size:12.5px; margin:0 0 14px; line-height:1.4; }
+
+  .row{
+    display:flex; justify-content:space-between; align-items:center;
+    background:var(--panel2); border-radius:10px; padding:10px 12px; margin-bottom:9px;
+  }
+  .row .info{ display:flex; flex-direction:column; gap:2px; }
+  .row .label{ font-size:13.5px; font-weight:600; }
+  .row .sub{ font-size:11px; color:var(--muted); }
+
+  button{
+    font-family:inherit; border:none; border-radius:8px; padding:10px 14px;
+    font-size:13px; font-weight:700; cursor:pointer; background:var(--accent);
+    color:#04231e; min-height:38px; white-space:nowrap;
+  }
+  button:disabled{ opacity:.35; }
+  button.gemBtn{ background:var(--gem); color:#04233a; }
+  button.dangerBtn{ background:var(--danger); color:#2a0006; }
+  button.ghost{ background:transparent; border:1px solid #2a2f45; color:var(--text); }
+  button.big{
+    width:100%; padding:16px; font-size:16px; border-radius:14px;
+    background:linear-gradient(135deg,var(--accent),#2fb8a0); color:#04231e;
+  }
+
+  .bar-outer{ height:8px; border-radius:4px; background:#1f2436; overflow:hidden; margin-top:4px; }
+  .bar-inner{ height:100%; border-radius:4px; transition:width .15s; }
+
+  .cardGrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0; }
+  .statCard{ background:var(--panel2); border-radius:10px; padding:10px; text-align:center; }
+  .statCard .n{ font-size:18px; font-weight:800; }
+  .statCard .l{ font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+
+  .lockedTier{ opacity:.5; }
+  .pill{ font-size:9px; padding:2px 7px; border-radius:20px; background:#1f2436; color:var(--muted); }
+
+  /* ---- bottom nav ---- */
+  #bottomNav{
+    display:flex; background:var(--panel2); border-top:1px solid #1f2436;
+    flex-shrink:0;
+  }
+  #bottomNav button{
+    flex:1; background:transparent; border-radius:0; color:var(--muted);
+    font-size:10px; display:flex; flex-direction:column; align-items:center; gap:2px;
+    padding:8px 0 10px;
+  }
+  #bottomNav button .ic{ font-size:18px; }
+  #bottomNav button.active{ color:var(--accent); }
+  #phone.battle-mode #bottomNav{ display:none; }
+
+  /* ---- battle screen ---- */
+  #screen-battle{ position:relative; background:#04060c; }
+  #battleTop{
+    display:flex; align-items:center; gap:10px; padding:8px 10px;
+    background:rgba(10,12,20,.7); font-size:11.5px; z-index:5; flex-shrink:0;
+  }
+  #battleTop .stat{ display:flex; align-items:center; gap:4px; font-weight:700; }
+  #battleTop .wave{ margin-left:auto; font-weight:800; letter-spacing:.5px; }
+  #pauseBtn{ background:#1f2436; color:var(--text); padding:6px 10px; min-height:auto; font-size:12px; }
+  #doubleCoinBtn{ background:#1f2436; color:var(--gold); padding:6px 10px; min-height:auto; font-size:12px; }
+  #canvasWrap{ flex:1; position:relative; min-height:0; }
+  canvas{ display:block; width:100%; height:100%; background:#0e1a10; }
+  #planetLabel{
+    position:absolute; top:6px; left:50%; transform:translateX(-50%);
+    font-size:9.5px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); z-index:3;
+  }
+  #sideBars{
+    position:absolute; right:8px; top:36px; display:flex; flex-direction:column; gap:8px; width:90px; z-index:4;
+  }
+  #sideBars .lbl{ font-size:9px; color:var(--muted); margin-bottom:2px; }
+  #superBtn{
+    display:none; width:100%; margin-top:6px;
+    background:var(--accent2); color:#1f0033; padding:7px 8px;
+    border-radius:14px; font-size:11px; box-shadow:0 0 14px rgba(192,132,252,.5);
+  }
+  #overlay{
+    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    background:rgba(3,4,10,.88); z-index:10; padding:20px;
+  }
+  #overlay .card{
+    background:var(--panel2); border:1px solid #2a2f45; border-radius:14px;
+    padding:24px 22px; text-align:center; width:100%; max-width:320px;
+  }
+  #overlay h2{ margin:0 0 8px; font-size:18px; }
+  #overlay p{ color:var(--muted); font-size:12.5px; margin:0 0 16px; }
+  #overlay .btnRow{ display:flex; flex-direction:column; gap:8px; }
+
+  /* ---- in-battle upgrade drawer ---- */
+  #upgradeDrawer{
+    position:absolute; left:0; right:0; bottom:0; z-index:8;
+    background:rgba(22,26,42,0.78); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
+    border-top:1px solid #2a2f45;
+    border-radius:16px 16px 0 0; box-shadow:0 -8px 24px rgba(0,0,0,.5);
+    max-height:44%; display:flex; flex-direction:column;
+    transform:translateY(100%); transition:transform .22s ease;
+  }
+  #upgradeDrawer.open{ transform:translateY(0); }
+  #drawerHandleRow{
+    display:flex; align-items:center; gap:8px;
+    padding:8px 10px; border-bottom:1px solid #1f2436; flex-shrink:0;
+  }
+  #drawerTabs{ display:flex; gap:6px; }
+  .drawerTab{
+    background:#1c2338; border:1px solid #2a2f45; color:var(--text);
+    font-size:15px; padding:6px 10px; border-radius:8px; min-height:auto;
+  }
+  .drawerTab.active{ background:var(--accent); color:#04231e; border-color:var(--accent); }
+  #drawerPausedBadge{ margin-left:auto; font-size:11px; color:var(--muted); white-space:nowrap; }
+  #drawerClose{ background:#1f2436; color:var(--text); min-height:auto; padding:6px 10px; font-size:12px; }
+  #drawerBody{ overflow-y:auto; padding:8px 14px 12px; }
+  #drawerBody h3{ margin:10px 0 5px; }
+  #drawerBody h3:first-child{ margin-top:0; }
+  #drawerBody .row{ padding:6px 10px; background:rgba(22,26,42,0.55); }
+  #drawerBackdrop{
+    position:absolute; inset:0; background:rgba(0,0,0,.12); z-index:7;
+    display:none;
+  }
+  #drawerBackdrop.open{ display:block; }
+  #bottomUpgradeBtns{
+    position:absolute; bottom:14px; left:0; right:0; z-index:5;
+    display:flex; justify-content:space-between; padding:0 12px;
+    pointer-events:none;
+  }
+  #bottomUpgradeBtns button{
+    pointer-events:auto; background:#1c2338; color:var(--text);
+    border:1px solid #2a2f45; border-radius:22px; padding:9px 16px; font-size:12.5px;
+  }
+
+  /* ---- home screen: full-bleed ship view with overlaid HUD ---- */
+  #screen-home{ position:relative; overflow:hidden; }
+  #shipPreview{ position:absolute; inset:0; width:100%; height:100%; display:block; z-index:0; }
+
+  #homeTopBar{
+    position:absolute; top:0; left:0; right:0; z-index:3;
+    display:flex; align-items:center; gap:14px;
+    padding:10px 14px; font-size:13px;
+    background:linear-gradient(to bottom, rgba(5,7,13,0.75), rgba(5,7,13,0));
+  }
+  #homeTopBar .stat{ display:flex; align-items:center; gap:5px; font-weight:700; }
+  #homeTopBar .coin{ color:var(--gold); }
+  #homeTopBar .gem{ color:var(--gem); }
+  #homeTopBar .prestige{ color:var(--accent2); }
+  #currencyStack{ display:flex; flex-direction:column; gap:2px; font-size:12px; }
+  #cloudStatus{
+    margin-left:auto; background:rgba(28,35,56,0.75); border:1px solid #2a2f45;
+    color:var(--text); min-height:auto; padding:6px 9px; font-size:12px; border-radius:8px; white-space:nowrap;
+  }
+  #cloudStatus.signed-in{ border-color:var(--accent); color:var(--accent); }
+  #devBtn{
+    background:rgba(28,35,56,0.75); border:1px solid #2a2f45;
+    color:var(--text); min-height:auto; padding:6px 9px; font-size:13px; border-radius:8px;
+  }
+  #devBtn.active{ background:var(--accent); color:#04231e; border-color:var(--accent); }
+  #resetSaveBtn{
+    background:rgba(28,35,56,0.75); border:1px solid #2a2f45;
+    color:var(--danger); min-height:auto; padding:6px 9px; font-size:13px; border-radius:8px;
+  }
+  #vibrateBtn{
+    background:rgba(28,35,56,0.75); border:1px solid #2a2f45;
+    color:var(--text); min-height:auto; padding:6px 9px; font-size:13px; border-radius:8px;
+  }
+  #soundBtn{
+    background:rgba(28,35,56,0.75); border:1px solid #2a2f45;
+    color:var(--text); min-height:auto; padding:6px 9px; font-size:13px; border-radius:8px;
+  }
+  #soundBtn.off{ opacity:.45; }
+  /* simulated rewarded test ad */
+  #testAdOverlay{
+    position:absolute; inset:0; z-index:60; display:flex;
+    align-items:center; justify-content:center; background:rgba(4,8,18,0.92);
+  }
+  #testAdOverlay .card{ text-align:center; padding:26px 30px; min-width:240px; }
+  #testAdBarWrap{ height:6px; background:#1f2436; border-radius:3px; margin-top:14px; overflow:hidden; }
+  #testAdBar{ height:100%; width:0%; background:var(--accent); transition:width 1s linear; }
+  #vibrateBtn.off{ opacity:.4; }
+
+  #planetSelector{ display:flex; flex-direction:column; gap:10px; margin-top:4px; }
+  .planetCard{
+    display:flex; flex-direction:column; gap:6px;
+    background:var(--panel2); border:2px solid transparent;
+    border-radius:12px; padding:14px 16px; cursor:pointer;
+  }
+  .planetCard.selected{ border-color:var(--accent); }
+  .planetCard.locked{ opacity:.55; cursor:default; }
+  .planetCard .prow{ display:flex; justify-content:space-between; align-items:center; }
+  .planetCard .pname{ font-size:15px; font-weight:700; }
+  .planetCard .psub{ font-size:12px; color:var(--muted); margin-top:3px; }
+  .planetCard .pblurb{ font-size:11.5px; color:var(--muted); font-style:italic; line-height:1.4; }
+  .planetCard .pstatus{ font-size:12px; color:var(--accent); font-weight:700; white-space:nowrap; }
+  .planetCard .plock{ font-size:20px; }
+  .prestigePlanetBtn{
+    background:rgba(192,132,252,0.15); border:1px solid var(--accent2); color:var(--accent2);
+    font-size:12px; padding:8px; border-radius:8px; margin-top:2px;
+  }
+
+  #homeBottomPanel{
+    position:absolute; left:0; right:0; bottom:0; z-index:3;
+    padding:18px 16px 16px;
+    background:linear-gradient(to bottom, rgba(7,9,18,0) 0%, rgba(7,9,18,0.85) 35%, rgba(7,9,18,0.97) 100%);
+  }
+  #homeTitleRow{ display:flex; align-items:baseline; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+  #homeTitleRow h1{ margin:0; font-size:19px; }
+  #homeTitleRow .sub{ margin:0; font-size:12px; }
+  #dailyRow{
+    display:flex; justify-content:space-between; align-items:center;
+    background:rgba(22,26,42,0.7); border-radius:10px; padding:9px 12px; margin-top:10px;
+  }
+  #dailyRow .info{ display:flex; flex-direction:column; gap:2px; }
+  #dailyRow .label{ font-size:12.5px; font-weight:600; }
+  #dailyRow .sub{ font-size:10.5px; color:var(--muted); }
+  /* ---- victory splash (Earth wave 100) ---- */
+  #victorySplash{
+    position:absolute; inset:0; z-index:40; display:none;
+    align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 40%, rgba(79,214,192,0.28), rgba(4,8,18,0.94) 72%);
+  }
+  #victorySplash.open{ display:flex; }
+  .vsCard{
+    text-align:center; padding:32px 28px; max-width:88%;
+    background:rgba(16,22,40,0.94); border:1px solid var(--accent); border-radius:20px;
+    box-shadow:0 0 70px rgba(79,214,192,0.4);
+    animation:vsPop .5s ease;
+  }
+  @keyframes vsPop{ 0%{ transform:scale(.7); opacity:0; } 100%{ transform:scale(1); opacity:1; } }
+  .vsTrophy{ font-size:60px; animation:vsBounce 1.3s ease infinite; }
+  @keyframes vsBounce{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-10px); } }
+  #victorySplash h1{ margin:6px 0 10px; font-size:29px; color:var(--accent); letter-spacing:1.5px; }
+  #vsSub{ font-size:13.5px; line-height:1.55; margin: 0 auto 12px; max-width:340px; }
+  #vsRewards{ font-size:16.5px; font-weight:700; color:var(--gold); margin-bottom:16px; animation:vsBounce 1.3s ease .3s infinite; }
+  #victorySplash button{ display:block; width:100%; margin:8px 0 0; }
+  /* ---- mini toast ---- */
+  #miniToast{
+    position:absolute; left:50%; bottom:110px; transform:translateX(-50%); z-index:50;
+    background:rgba(16,22,40,0.95); border:1px solid var(--accent); color:var(--text);
+    padding:8px 14px; border-radius:10px; font-size:12.5px; white-space:nowrap;
+    opacity:0; pointer-events:none; transition:opacity .25s;
+  }
+  #miniToast.show{ opacity:1; }
+
+  /* ---- tutorial ---- */
+  .tutorialHighlight{
+    position:relative; z-index:30;
+    box-shadow:0 0 0 4px rgba(79,214,192,.85), 0 0 20px 8px rgba(79,214,192,.5);
+    animation: tutorialPulse 1.15s ease-in-out infinite;
+  }
+  @keyframes tutorialPulse{
+    0%,100%{ box-shadow:0 0 0 4px rgba(79,214,192,.8), 0 0 16px 6px rgba(79,214,192,.4); }
+    50%{ box-shadow:0 0 0 7px rgba(79,214,192,1), 0 0 26px 12px rgba(79,214,192,.65); }
+  }
+  .tutorialDim{ opacity:.28 !important; pointer-events:none !important; transition:opacity .2s; }
+  #tutorialCard{
+    position:absolute; top:36px; left:12px; right:104px; z-index:29;
+    background:rgba(16,19,31,0.95); border:1px solid #2a2f45; border-radius:12px;
+    padding:10px 12px; font-size:12px; line-height:1.35; text-align:left;
+  }
+  #sideBars #tutorialCard{
+    position:static; width:100%; margin:0; padding:8px 9px;
+    font-size:10px; line-height:1.35;
+  }
+  #sideBars #tutorialCard .tutorialSkip{ font-size:9.5px; margin-top:6px; }
+  #tutorialModalBackdrop{
+    position:absolute; inset:0; z-index:40;
+    background:rgba(3,4,10,.88); display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  #tutorialModalBackdrop .card{
+    background:var(--panel2); border:1px solid #2a2f45; border-radius:14px;
+    padding:26px 22px; text-align:center; width:100%; max-width:320px;
+  }
+  #tutorialModalBackdrop h2{ margin:0 0 10px; font-size:19px; }
+  #tutorialModalBackdrop p{ color:var(--muted); font-size:13px; margin:0 0 18px; line-height:1.5; }
+  .tutorialSkip{
+    display:block; margin-top:10px; font-size:11px; color:var(--muted); text-decoration:underline;
+    background:none; border:none; padding:4px; width:auto; min-height:auto;
+  }
+</style>
+</head>
+<body>
+<div id="phone">
+
+  <!-- ============ HOME ============ -->
+  <div class="screen active" id="screen-home">
+    <canvas id="shipPreview"></canvas>
+
+    <div id="homeTopBar">
+      <div id="currencyStack">
+        <div class="stat coin">🪙 <span class="coinCount">0</span></div>
+        <div class="stat gem">💎 <span class="gemCount">0</span></div>
+      </div>
+      <div class="stat prestige">🔁 <span class="prestigeCount">0</span></div>
+      <button id="cloudStatus">☁️ Sign in</button>
+      <button id="vibrateBtn">📳</button>
+      <button id="soundBtn" title="Sound on/off">🔊</button>
+      <button id="devBtn" style="display:none">🛠</button>
+      <button id="resetSaveBtn" style="display:none">🗑</button>
+    </div>
+
+    <div id="homeBottomPanel">
+      <div id="homeTitleRow">
+        <h1 id="planetName">Planet I</h1>
+        <span class="sub" id="planetSub">Verdant Overgrowth</span>
+      </div>
+
+      <div class="cardGrid">
+        <div class="statCard"><div class="n" id="homeWave">1</div><div class="l">Best Wave</div></div>
+        <div class="statCard"><div class="n" id="homeRevives">5</div><div class="l">Revives Today</div></div>
+      </div>
+
+      <button class="big" id="playBtn">▶ Launch Defense</button>
+
+      <div id="dailyRow">
+        <div class="info"><span class="label">Daily Login — Day 1</span><span class="sub">+50 coins, +5 gems</span></div>
+        <button id="claimDaily">Claim</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ UPGRADES ============ -->
+  <div class="screen" id="screen-upgrades">
+    <div class="topBar">
+      <div class="stat coin">🪙 <span class="coinCount">0</span></div>
+      <div class="stat gem">💎 <span class="gemCount">0</span></div>
+      <div class="stat prestige">🔁 <span class="prestigeCount">0</span></div>
+    </div>
+    <div class="scroll">
+      <h1>Upgrades</h1>
+      <p class="sub">Spend coins earned in battle to strengthen your turret and ship.</p>
+
+      <h3>Turret</h3>
+      <div class="row">
+        <div class="info"><span class="label">Fire Rate</span><span class="sub upLvl" data-key="fireRate">Lv 0</span></div>
+        <button class="upBuy" data-key="fireRate">↑ <span class="upCost" data-key="fireRate"></span>c</button>
+      </div>
+      <div class="row">
+        <div class="info"><span class="label">Damage</span><span class="sub upLvl" data-key="damage">Lv 0</span></div>
+        <button class="upBuy" data-key="damage">↑ <span class="upCost" data-key="damage"></span>c</button>
+      </div>
+      <div class="row">
+        <div class="info"><span class="label">Crit Chance</span><span class="sub upLvl" data-key="crit">Lv 0</span></div>
+        <button class="upBuy" data-key="crit">↑ <span class="upCost" data-key="crit"></span>c</button>
+      </div>
+      <div class="row">
+        <div class="info"><span class="label">Range</span><span class="sub upLvl" data-key="range">Lv 0</span></div>
+        <button class="upBuy" data-key="range">↑ <span class="upCost" data-key="range"></span>c</button>
+      </div>
+
+      <h3>Ship</h3>
+      <div class="row">
+        <div class="info"><span class="label">Shield Capacity</span><span class="sub upLvl" data-key="shieldCap">Lv 0</span></div>
+        <button class="upBuy" data-key="shieldCap">↑ <span class="upCost" data-key="shieldCap"></span>c</button>
+      </div>
+      <div class="row">
+        <div class="info"><span class="label">Shield Regen</span><span class="sub upLvl" data-key="shieldRegen">Lv 0</span></div>
+        <button class="upBuy" data-key="shieldRegen">↑ <span class="upCost" data-key="shieldRegen"></span>c</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PLANETS ============ -->
+  <div class="screen" id="screen-planets">
+    <div class="topBar">
+      <div class="stat coin">🪙 <span class="coinCount">0</span></div>
+      <div class="stat gem">💎 <span class="gemCount">0</span></div>
+      <div class="stat prestige">🔁 <span class="prestigeCount">0</span></div>
+    </div>
+    <div class="scroll">
+      <h1>Star Chart</h1>
+      <p class="sub">Every world here is a stop on the way home. Clear a planet's boss to chart the next one.</p>
+      <div id="planetSelector"></div>
+    </div>
+  </div>
+
+  <!-- ============ STORE ============ -->
+  <div class="screen" id="screen-store">
+    <div class="topBar">
+      <div class="stat coin">🪙 <span class="coinCount">0</span></div>
+      <div class="stat gem">💎 <span class="gemCount">0</span></div>
+      <div class="stat prestige">🔁 <span class="prestigeCount">0</span></div>
+    </div>
+    <div class="scroll">
+      <h1>Off-Planet Store</h1>
+      <p class="sub">Gems buy permanent weapon core tiers and cosmetics. Ads can earn bonus gems.</p>
+
+      <h3>Permanent Multipliers <span class="pill">survives prestige</span></h3>
+      <p class="sub" style="margin-bottom:8px;">Each purchase adds +10% to that stat, permanently — even through a prestige reset. Costs rise each level.</p>
+      <div class="row">
+        <div class="info"><span class="label">Turret Damage</span><span class="sub metaLvl" data-key="damage">x1.00</span></div>
+        <button class="gemBtn metaBuy" data-key="damage"><span class="metaCost" data-key="damage"></span> gems</button>
+      </div>
+      <div class="row">
+        <div class="info"><span class="label">Fire Rate</span><span class="sub metaLvl" data-key="fireRate">x1.00</span></div>
+        <button class="gemBtn metaBuy" data-key="fireRate"><span class="metaCost" data-key="fireRate"></span> gems</button>
+      </div>
+      <div class="row">
+        <div class="info"><span class="label">Crit Chance</span><span class="sub metaLvl" data-key="crit">x1.00</span></div>
+        <button class="gemBtn metaBuy" data-key="crit"><span class="metaCost" data-key="crit"></span> gems</button>
+      </div>
+      <div class="row">
+        <div class="info"><span class="label">Range</span><span class="sub metaLvl" data-key="range">x1.00</span></div>
+        <button class="gemBtn metaBuy" data-key="range"><span class="metaCost" data-key="range"></span> gems</button>
+      </div>
+      <div class="row">
+        <div class="info"><span class="label">Shield Capacity</span><span class="sub metaLvl" data-key="shieldCap">x1.00</span></div>
+        <button class="gemBtn metaBuy" data-key="shieldCap"><span class="metaCost" data-key="shieldCap"></span> gems</button>
+      </div>
+      <div class="row">
+        <div class="info"><span class="label">Shield Regen</span><span class="sub metaLvl" data-key="shieldRegen">x1.00</span></div>
+        <button class="gemBtn metaBuy" data-key="shieldRegen"><span class="metaCost" data-key="shieldRegen"></span> gems</button>
+      </div>
+
+      <h3>Gem Tier Unlocks</h3>
+      <div class="row" id="tierRow-1">
+        <div class="info"><span class="label">Tier I Weapon Core</span><span class="sub">+40% base damage</span></div>
+        <button class="gemBtn" data-tier="1">50 gems</button>
+      </div>
+      <div class="row lockedTier" id="tierRow-2">
+        <div class="info"><span class="label">Tier II Weapon Core</span><span class="sub">+80% base damage</span></div>
+        <button class="gemBtn" data-tier="2">120 gems</button>
+      </div>
+      <div class="row lockedTier" id="tierRow-3">
+        <div class="info"><span class="label">Tier III Weapon Core</span><span class="sub">+150% base damage</span></div>
+        <button class="gemBtn" data-tier="3">300 gems</button>
+      </div>
+
+      <h3>Cosmetics <span class="pill">visual only</span></h3>
+      <div class="row">
+        <div class="info"><span class="label">Crimson Hull Skin</span><span class="sub">Recolor your ship</span></div>
+        <button class="cosmeticBuy gemBtn" data-cosmetic="crimsonHull" data-cost="30">30 gems</button>
+      </div>
+      <div class="row">
+        <div class="info"><span class="label">Ion Trail Effect</span><span class="sub">Engine particle upgrade</span></div>
+        <button class="cosmeticBuy gemBtn" data-cosmetic="ionTrail" data-cost="45">45 gems</button>
+      </div>
+
+      <h3>Get More Gems</h3>
+      <div class="row">
+        <div class="info"><span class="label">Watch Ad for Gems</span><span class="sub">+5 gems</span></div>
+        <button id="adGems">▶ Watch</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DRONES ============ -->
+  <div class="screen" id="screen-drones">
+    <div class="topBar">
+      <div class="stat coin">🪙 <span class="coinCount">0</span></div>
+      <div class="stat gem">💎 <span class="gemCount">0</span></div>
+      <div class="stat prestige">🔁 <span class="prestigeCount">0</span></div>
+    </div>
+    <div class="scroll">
+      <h1>Companion Drones</h1>
+      <p class="sub">Bought with coins. Equip drones to change how you fight.</p>
+
+      <div class="row">
+        <div class="info"><span class="label">Debuff Drone</span><span class="sub">Slows nearby enemies</span></div>
+        <button class="ghost droneBuy" data-drone="debuff">80c</button>
+      </div>
+      <div class="row">
+        <div class="info"><span class="label">Attack Drone</span><span class="sub">Periodic bonus damage</span></div>
+        <button class="ghost droneBuy" data-drone="attack">80c</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BATTLE ============ -->
+  <div class="screen" id="screen-battle">
+    <div id="battleTop">
+      <button id="pauseBtn">⏸ Menu</button>
+      <button id="speedBtn">▶ 1x</button>
+      <button id="doubleCoinBtn" title="Double coin drops for the rest of this wave" style="display:none">🪙 2x</button>
+      <div class="stat" id="adTicketStat" style="display:none" title="Ad-skip tickets — spent automatically instead of watching an ad">🎟 <span id="adTicketCount">0</span></div>
+      <div class="stat coin">🪙 <span class="coinCount">0</span></div>
+      <div class="stat">❤️ <span class="reviveCount">5</span>/5</div>
+      <div class="stat">👾 <span class="enemyCount">0</span></div>
+      <div class="wave">WAVE <span class="waveNum">1</span>/<span class="waveMax">20</span></div>
+    </div>
+    <div id="canvasWrap">
+      <div id="planetLabel">Planet I — Verdant Overgrowth</div>
+      <canvas id="game"></canvas>
+      <div id="sideBars">
+        <div>
+          <div class="lbl">Shield</div>
+          <div class="bar-outer"><div class="bar-inner" id="shieldBar" style="background:var(--accent); width:100%"></div></div>
+        </div>
+        <div id="superChargeWrap">
+          <div class="lbl">Super Charge</div>
+          <div class="bar-outer"><div class="bar-inner" id="superBar" style="background:var(--accent2); width:0%"></div></div>
+          <button id="superBtn">⚡ Unleash</button>
+        </div>
+      </div>
+      <div id="bottomUpgradeBtns">
+        <button id="turretUpgBtn">🔫 Turret</button>
+        <button id="droneUpgBtn">🤖 Drones</button>
+        <button id="shipUpgBtn">🛡 Ship</button>
+        <button id="launchpadUpgBtn" style="display:none">🚀 Pad</button>
+      </div>
+      <div id="overlay"><div class="card" id="overlayCard"></div></div>
+
+      <div id="victorySplash">
+        <div class="vsCard">
+          <div class="vsTrophy">🏆</div>
+          <h1>EARTH SAVED!</h1>
+          <p id="vsSub"></p>
+          <div id="vsRewards">+50 💎 &nbsp;·&nbsp; +3 🎟 Ad-Skip Tickets</div>
+          <button id="vsRestartBtn">🔄 Restart From Wave 1</button>
+          <button id="vsHomeBtn" class="ghost">🏠 Return to Home</button>
+        </div>
+      </div>
+
+      <div id="drawerBackdrop"></div>
+      <div id="upgradeDrawer">
+        <div id="drawerHandleRow">
+          <div id="drawerTabs">
+            <button class="drawerTab" data-cat="turret">🔫</button>
+            <button class="drawerTab" data-cat="drones">🤖</button>
+            <button class="drawerTab" data-cat="ship">🛡</button>
+            <button class="drawerTab" data-cat="launchpad" style="display:none">🚀</button>
+          </div>
+          <span id="drawerPausedBadge">⏸ Paused</span>
+          <button id="drawerClose">Close ✕</button>
+        </div>
+        <div id="drawerBody">
+          <div id="drawerTurretGroup">
+            <h3>Turret</h3>
+            <div class="row">
+              <div class="info"><span class="label">Fire Rate</span><span class="sub upLvl" data-key="fireRate">Lv 0</span></div>
+              <button class="upBuy" data-key="fireRate">↑ <span class="upCost" data-key="fireRate"></span>c</button>
+            </div>
+            <div class="row">
+              <div class="info"><span class="label">Damage</span><span class="sub upLvl" data-key="damage">Lv 0</span></div>
+              <button class="upBuy" data-key="damage">↑ <span class="upCost" data-key="damage"></span>c</button>
+            </div>
+            <div class="row">
+              <div class="info"><span class="label">Crit Chance</span><span class="sub upLvl" data-key="crit">Lv 0</span></div>
+              <button class="upBuy" data-key="crit">↑ <span class="upCost" data-key="crit"></span>c</button>
+            </div>
+            <div class="row">
+              <div class="info"><span class="label">Range</span><span class="sub upLvl" data-key="range">Lv 0</span></div>
+              <button class="upBuy" data-key="range">↑ <span class="upCost" data-key="range"></span>c</button>
+            </div>
+          </div>
+          <div id="drawerDroneGroup">
+            <h3>Companion Drones</h3>
+            <div class="row">
+              <div class="info"><span class="label">Debuff Drone</span><span class="sub">Slows nearby enemies</span></div>
+              <button class="ghost droneBuy" data-drone="debuff">80c</button>
+            </div>
+            <div class="row">
+              <div class="info"><span class="label">Attack Drone</span><span class="sub">Periodic bonus damage</span></div>
+              <button class="ghost droneBuy" data-drone="attack">80c</button>
+            </div>
+          </div>
+          <div id="drawerShipGroup">
+            <h3>Ship</h3>
+            <div class="row">
+              <div class="info"><span class="label">Shield Capacity</span><span class="sub upLvl" data-key="shieldCap">Lv 0</span></div>
+              <button class="upBuy" data-key="shieldCap">↑ <span class="upCost" data-key="shieldCap"></span>c</button>
+            </div>
+            <div class="row">
+              <div class="info"><span class="label">Shield Regen</span><span class="sub upLvl" data-key="shieldRegen">Lv 0</span></div>
+              <button class="upBuy" data-key="shieldRegen">↑ <span class="upCost" data-key="shieldRegen"></span>c</button>
+            </div>
+          </div>
+          <div id="drawerLaunchpadGroup" style="display:none">
+            <h3>Launchpad</h3>
+            <div class="row">
+              <div class="info"><span class="label">Repair Crew</span><span class="sub">+25% shield regen — one-time</span></div>
+              <button class="lpBuy" data-pad="repair">↑ <span class="upCost"></span>c</button>
+            </div>
+            <div class="row">
+              <div class="info"><span class="label">Corner Turrets</span><span class="sub" id="padTurretsLvl">0/4 built</span></div>
+              <button class="lpBuy" data-pad="turrets">↑ <span class="upCost"></span>c</button>
+            </div>
+            <div class="row">
+              <div class="info"><span class="label">Turret Calibration</span><span class="sub" id="padCalLvl">x1.0 turret dmg</span></div>
+              <button class="lpBuy" data-pad="calibration">↑ <span class="upCost"></span>c</button>
+            </div>
+            <div class="row">
+              <div class="info"><span class="label">Fighter Squadron</span><span class="sub" id="padJetsLvl">No jets</span></div>
+              <button class="lpBuy" data-pad="jets">↑ <span class="upCost"></span>c</button>
+            </div>
+            <div class="row">
+              <div class="info"><span class="label">Shield Generator</span><span class="sub" id="padShieldLvl">x1.00 shield cap/regen</span></div>
+              <button class="lpBuy" data-pad="shield">↑ <span class="upCost"></span>c</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ NAV ============ -->
+  <nav id="bottomNav">
+    <button data-screen="home" class="active"><span class="ic">🏠</span>Home</button>
+    <button data-screen="planets"><span class="ic">🪐</span>Planets</button>
+    <button data-screen="store"><span class="ic">💎</span>Store</button>
+    <button data-screen="drones"><span class="ic">🤖</span>Drones</button>
+  </nav>
+
+</div>
+
+<!-- Google H5 Games Ads (AdSense for Games) — real rewarded web ads.
+     1. Apply at https://adsense.google.com and add the site hosting this game.
+     2. Once approved, uncomment the script tag below.
+     3. The ad adapter above auto-detects it via adBreak() and starts earning. -->
+<!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adbreak.js"></script> -->
+<script type="module">
+  // ============================================================
+  // CLOUD SYNC SETUP — Firebase Auth (Google Sign-In) + Firestore
+  // ============================================================
+  // 1. Create a project at https://console.firebase.google.com
+  // 2. Build > Authentication > Sign-in method > enable "Google"
+  // 3. Build > Firestore Database > Create database (start in
+  //    production mode) > paste the security rules given below
+  //    into the Rules tab.
+  // 4. Project settings (gear icon) > General > "Your apps" >
+  //    add a Web app > copy the firebaseConfig object it gives
+  //    you and paste it in place of the placeholder below.
+  // 5. Serve this file over http://localhost or https:// (not by
+  //    double-clicking it as a file:// URL) — Google Sign-In's
+  //    redirect flow requires a real origin. A quick local server:
+  //    `python3 -m http.server 8080` from this file's folder,
+  //    then open http://localhost:8080/planet_defense_prototype.html
+  //
+  // Firestore security rules to paste in (Firestore > Rules):
+  //   rules_version = '2';
+  //   service cloud.firestore {
+  //     match /databases/{database}/documents {
+  //       match /saves/{userId} {
+  //         allow read, write: if request.auth != null && request.auth.uid == userId;
+  //       }
+  //     }
+  //   }
+  // This restricts every player to only ever reading/writing their
+  // own save document — nobody can touch anyone else's data.
+  // ============================================================
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCUsIyBQj0v7uOtMj5rgL5_lcVtPeLe6io",
+    authDomain: "shipdefenceapp.firebaseapp.com",
+    projectId: "shipdefenceapp",
+    storageBucket: "shipdefenceapp.firebasestorage.app",
+    messagingSenderId: "1019348589704",
+    appId: "1:1019348589704:web:00a4f1c8bbf412c736133d",
+    measurementId: "G-JV5LVR01RL"
+  };
+
+  const isConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
+  if (!isConfigured){
+    console.info('Cloud sync not configured — running in local-save-only mode. See the setup comment at the top of this script block to enable Google sign-in.');
+  } else {
+    try{
+      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+      const { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } =
+        await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+      const { getFirestore, doc, getDoc, setDoc, deleteDoc } =
+        await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      window.cloudSignIn = ()=> signInWithPopup(auth, new GoogleAuthProvider())
+        .catch(e=> { console.warn('Sign-in failed:', e); alert('Sign-in failed: ' + e.message); });
+      window.cloudSignOut = ()=> signOut(auth);
+
+      window.cloudSaveData = async (data)=>{
+        if (!window.cloudUser) return;
+        try{ await setDoc(doc(db, 'saves', window.cloudUser.uid), data); }
+        catch(e){ console.warn('Cloud save failed:', e); }
+      };
+
+      window.cloudLoadData = async ()=>{
+        if (!window.cloudUser) return null;
+        try{
+          const snap = await getDoc(doc(db, 'saves', window.cloudUser.uid));
+          return snap.exists() ? snap.data() : null;
+        } catch(e){ console.warn('Cloud load failed:', e); return null; }
+      };
+
+      window.cloudDeleteData = async ()=>{
+        if (!window.cloudUser) return;
+        await deleteDoc(doc(db, 'saves', window.cloudUser.uid));
+      };
+
+      onAuthStateChanged(auth, (user)=>{
+        window.cloudUser = user;
+        const btn = document.getElementById('cloudStatus');
+        if (btn) btn.classList.toggle('signed-in', !!user);
+        if (user && window.onCloudSignedIn) window.onCloudSignedIn();
+        if (!user && window.onCloudSignedOut) window.onCloudSignedOut();
+      });
+    } catch(e){
+      console.warn('Firebase failed to initialize — falling back to local-save-only mode:', e);
+    }
+  }
+</script>
+
+<script>
+(() => {
+  const phone = document.getElementById('phone');
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const shipPrev = document.getElementById('shipPreview');
+  const shipPrevCtx = shipPrev.getContext('2d');
+
+  // Battle canvas size in CSS pixels — the coordinate space all gameplay math
+  // uses. The backing store is scaled by devicePixelRatio (capped at 2.5 so
+  // high-dpi screens don't allocate huge buffers) so rendering stays sharp on
+  // modern phones; ctx is transformed so all drawing still happens in CSS px.
+  let VIEW_W = 0, VIEW_H = 0;
+  function resizeCanvas(){
+    const wrap = document.getElementById('canvasWrap');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    const oldCx = VIEW_W/2, oldCy = VIEW_H/2;
+    VIEW_W = wrap.clientWidth;
+    VIEW_H = wrap.clientHeight;
+    canvas.width = Math.max(1, Math.round(VIEW_W * dpr));
+    canvas.height = Math.max(1, Math.round(VIEW_H * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Keep enemies/projectiles positioned relative to the ship when the canvas
+    // center moves (entering battle, rotating the screen). Without this, waves
+    // spawned while the battle screen was hidden (initial load, planet switch)
+    // stay clustered around the top-left corner instead of surrounding the ship.
+    const dx = VIEW_W/2 - oldCx, dy = VIEW_H/2 - oldCy;
+    if ((dx || dy) && state.enemies.length){
+      for (const e of state.enemies){ e.x += dx; e.y += dy; }
+      for (const p of state.projectiles){ p.x += dx; p.y += dy; }
+    }
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  // ---------- Screen navigation ----------
+  let currentScreen = 'home';
+  function showScreen(name){
+    currentScreen = name;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-'+name).classList.add('active');
+    document.querySelectorAll('#bottomNav button').forEach(b => b.classList.toggle('active', b.dataset.screen===name));
+    phone.classList.toggle('battle-mode', name==='battle');
+    if (name !== 'battle') { closeDrawer(); }
+    if (name !== 'battle' && state.padIntro){
+      state.padIntro = false;
+      const b0 = document.getElementById('launchpadUpgBtn');
+      if (b0) b0.classList.remove('tutorialHighlight');
+      const c0 = document.getElementById('tutorialCard');
+      if (c0) c0.remove();
+    }
+    if (name === 'battle') { resizeCanvas(); lastTick = performance.now(); }
+    if (name === 'home') { resizeShipPreview(); }
+  }
+  document.querySelectorAll('#bottomNav button').forEach(b=>{
+    b.onclick = ()=> showScreen(b.dataset.screen);
+  });
+  document.getElementById('playBtn').onclick = ()=> {
+    showScreen('battle');
+    if (!state.tutorial.done && !state.tutorial.active){
+      state.tutorial.active = true;
+      state.tutorial.step = 0;
+      state.coins += 120; // guarantees enough for an upgrade + a drone during the tutorial
+      renderTutorialStep();
+    }
+    // First launch on Earth: pause and point out the Pad button — the launchpad
+    // fortifications are Earth's key progression, don't let players miss them.
+    if (isEarth() && !state.earthPadIntroDone){
+      setTimeout(()=>{
+        if (currentScreen !== 'battle' || state.earthPadIntroDone) return;
+        state.padIntro = true; // freezes the battle (loop early-outs) until Pad is tapped
+        const b = document.getElementById('launchpadUpgBtn');
+        if (b){ b.style.display = ''; b.classList.add('tutorialHighlight'); }
+        const card = document.createElement('div');
+        card.id = 'tutorialCard'; // reuse the tutorial card styling
+        card.innerHTML = "You've landed on the old launchpad. Tap <b>🚀 Pad</b> to fortify it — a repair crew, corner turrets, a fighter squadron, and a base shield generator will help you hold Earth for 100 waves.";
+        document.getElementById('sideBars').appendChild(card);
+      }, 120); // let a few frames render first so the scene (and the pad) is visible behind the pause
+    }
+  };
+
+  document.getElementById('devBtn').onclick = (e)=>{
+    state.devMode = !state.devMode;
+    e.target.classList.toggle('active', state.devMode);
+    e.target.title = state.devMode ? 'Dev: Testing Mode ON' : 'Dev: Testing Mode OFF';
+    if (state.devMode){
+      // Grant everything so features can be tested without grinding to unlock them.
+      // Note: turning this off does not claw back what's already been granted.
+      state.coins = 999999; state.gems = 999999;
+      state.unlockedPlanets = state.unlockedPlanets.map(()=>true);
+      state.turret.fireRateLvl = 20; state.turret.dmgLvl = 20; state.turret.critLvl = 20; state.turret.rangeLvl = 15;
+      state.ship.shieldCapLvl = 20; state.ship.shieldRegenLvl = 20;
+      state.turret.tierBonus = 2.5;
+      [1,2,3].forEach(tier=>{
+        const btn = document.querySelector(`[data-tier="${tier}"]`);
+        const row = document.getElementById('tierRow-'+tier);
+        if (btn){ btn.disabled = true; btn.textContent = 'Owned'; }
+        if (row){ row.classList.remove('lockedTier'); }
+      });
+      state.droneDebuff = true; state.droneAttack = true;
+      state.padRepair = 1; state.padTurrets = 4; state.padCalibration = 3; state.padJets = 3; state.padShield = 5; // full launchpad
+      state.adTickets = 5; // test the ad-skip ticket flow
+      state.cosmetics.crimsonHull = true; state.cosmetics.ionTrail = true;
+      Object.keys(state.metaLevel).forEach(key=>{
+        state.metaLevel[key] = 10;
+        state.metaMult[key] = 1 + 10*0.1;
+      });
+      if (!state.tutorial.done){ clearTutorialUI(); state.tutorial.active = false; state.tutorial.done = true; }
+    }
+    updateUI();
+  };
+  document.getElementById('pauseBtn').onclick = ()=> showScreen('home');
+
+  document.getElementById('resetSaveBtn').onclick = async ()=>{
+    const ok = confirm('Reset ALL progress? This wipes your coins, gems, upgrades, drones, cosmetics, unlocked planets, prestige tiers, tutorial state and daily streak — on this device AND in your cloud save if signed in. Completely fresh start. This cannot be undone.');
+    if (!ok) return;
+    resetInProgress = true;
+    try{ localStorage.removeItem(SAVE_KEY); } catch(e){ console.warn('Could not clear local save:', e); }
+    // also wipe the cloud copy, otherwise signing back in just restores everything
+    if (window.cloudUser && window.cloudDeleteData){
+      try{ await window.cloudDeleteData(); }
+      catch(e){ console.warn('Could not clear cloud save:', e); }
+    }
+    location.reload();
+  };
+
+  function updateVibrateBtnUI(){
+    const btn = document.getElementById('vibrateBtn');
+    if (!btn) return;
+    btn.classList.toggle('off', !state.settings.vibrationEnabled);
+    btn.textContent = state.settings.vibrationEnabled ? '📳' : '🔕';
+  }
+  // Mini toast — small transient message (ticket used, dev tools unlocked, ...)
+  function showToast(msg){
+    let t = document.getElementById('miniToast');
+    if (!t){ t = document.createElement('div'); t.id = 'miniToast'; document.getElementById('phone').appendChild(t); }
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._h);
+    t._h = setTimeout(()=>t.classList.remove('show'), 1900);
+  }
+
+  // Hidden dev tools: 10 quick taps on the vibrate button (each within 2s of
+  // the last) reveals the dev + reset buttons. They hide again on next load,
+  // so production players never see them.
+  let vibrateTaps = 0, vibrateLastTap = 0;
+  document.getElementById('vibrateBtn').onclick = ()=>{
+    state.settings.vibrationEnabled = !state.settings.vibrationEnabled;
+    updateVibrateBtnUI();
+    saveGame();
+    const now = Date.now();
+    vibrateTaps = (now - vibrateLastTap > 2000) ? 1 : vibrateTaps + 1;
+    vibrateLastTap = now;
+    if (vibrateTaps === 6) showToast('Keep tapping... 🛠');
+    if (vibrateTaps >= 10){
+      vibrateTaps = 0;
+      document.getElementById('devBtn').style.display = '';
+      document.getElementById('resetSaveBtn').style.display = '';
+      showToast('🛠 Dev tools unlocked');
+    }
+  };
+
+  function updateSoundBtnUI(){
+    const btn = document.getElementById('soundBtn');
+    if (!btn) return;
+    btn.textContent = state.settings.soundEnabled ? '🔊' : '🔇';
+    btn.classList.toggle('off', !state.settings.soundEnabled);
+  }
+  document.getElementById('soundBtn').onclick = ()=>{
+    state.settings.soundEnabled = !state.settings.soundEnabled;
+    updateSoundBtnUI();
+    saveGame();
+    if (state.settings.soundEnabled) SFX.buy(); // little confirmation blip
+  };
+
+  document.getElementById('cloudStatus').onclick = ()=>{
+    if (!window.cloudSignIn){
+      alert('Cloud sync isn\'t configured yet in this build. Progress is still saved locally on this device.');
+      return;
+    }
+    if (window.cloudUser){
+      const ok = confirm(`Sign out of ${window.cloudUser.displayName || 'your account'}? Local progress on this device is unaffected.`);
+      if (ok && window.cloudSignOut) window.cloudSignOut();
+    } else {
+      window.cloudSignIn();
+    }
+  };
+
+  document.getElementById('speedBtn').onclick = (e)=>{
+    state.gameSpeed = state.gameSpeed === 1 ? 2 : 1;
+    e.target.textContent = (state.gameSpeed === 2 ? '⏩ 2x' : '▶ 1x');
+  };
+
+  document.getElementById('doubleCoinBtn').onclick = ()=>{
+    if (!state.waveActive || state.doubleCoinsThisWave) return;
+    withRewardedAd(()=>{ state.doubleCoinsThisWave = true; updateUI(); });
+  };
+
+  const drawer = document.getElementById('upgradeDrawer');
+  const drawerBackdrop = document.getElementById('drawerBackdrop');
+  const drawerTurretGroup = document.getElementById('drawerTurretGroup');
+  const drawerShipGroup = document.getElementById('drawerShipGroup');
+  const drawerDroneGroup = document.getElementById('drawerDroneGroup');
+  const drawerLaunchpadGroup = document.getElementById('drawerLaunchpadGroup');
+  const drawerTabs = document.querySelectorAll('.drawerTab');
+  let drawerOpen = false;
+  function openDrawer(category){
+    drawerTurretGroup.style.display = 'none';
+    drawerShipGroup.style.display = 'none';
+    drawerDroneGroup.style.display = 'none';
+    drawerLaunchpadGroup.style.display = 'none';
+    if (category === 'turret'){ drawerTurretGroup.style.display = 'block'; }
+    else if (category === 'drones'){ drawerDroneGroup.style.display = 'block'; }
+    else if (category === 'launchpad'){ drawerLaunchpadGroup.style.display = 'block'; }
+    else { drawerShipGroup.style.display = 'block'; }
+    drawerTabs.forEach(tab => tab.classList.toggle('active', tab.dataset.cat === category));
+    drawer.classList.add('open'); drawerBackdrop.classList.add('open');
+    drawerOpen = true;
+  }
+  function closeDrawer(){ drawer.classList.remove('open'); drawerBackdrop.classList.remove('open'); drawerOpen = false; }
+
+  // ---------- Tutorial ----------
+  function hasBoughtAnyUpgrade(){
+    return state.turret.fireRateLvl>0 || state.turret.dmgLvl>0 || state.turret.critLvl>0 ||
+           state.turret.rangeLvl>0 || state.ship.shieldCapLvl>0 || state.ship.shieldRegenLvl>0;
+  }
+  const tutorialSteps = [
+    { id:'intro', type:'modal',
+      title:'Signal Lost',
+      text:"A wormhole ripped your ship off course and flung you into an uncharted part of the galaxy. Damaged and low on power, you've crash-landed — and the locals aren't friendly. Your turret auto-fires at anything in range. Let's get you set up before the waves start. Training mode is on — your ship can't be destroyed until the tutorial ends." },
+    { id:'watchFire', type:'wait-action',
+      text:"Your turret is auto-firing at nearby enemies. Watch it take a couple down.",
+      condition: ()=> state.totalKills >= 2 },
+    { id:'buyUpgrade', type:'wait-action',
+      text:"You've earned coins from those kills. Tap 'Turret' below and buy the Damage upgrade.",
+      highlightId:'turretUpgBtn',
+      restrictCategory:'turret', restrictKind:'upgrade', restrictKey:'damage',
+      condition: ()=> state.turret.dmgLvl >= 1 },
+    { id:'equipDrone', type:'wait-action',
+      text:"Nice! Now tap 'Drones' below and equip the Attack Drone.",
+      highlightId:'droneUpgBtn',
+      restrictCategory:'drones', restrictKind:'drone', restrictKey:'attack',
+      condition: ()=> state.droneAttack === true },
+    { id:'watchDrone', type:'wait-action',
+      text:"Your Attack Drone strikes automatically. Watch it hit a few more times.",
+      condition: ()=> (state.tutorialDroneAttacks||0) >= 3 },
+    { id:'buyShieldRegen', type:'wait-action',
+      text:"One more thing — tap 'Ship' below and buy the Shield Regen upgrade.",
+      highlightId:'shipUpgBtn',
+      restrictCategory:'ship', restrictKind:'upgrade', restrictKey:'shieldRegen',
+      condition: ()=> state.ship.shieldRegenLvl >= 1 },
+    { id:'waitForSuperCharge', type:'wait-action',
+      text:"Back to the fight — keep firing and watch the Super Charge meter fill up. Upgrades are now unlocked — tap Turret, Drones or Ship any time to spend coins and stay alive.",
+      freeUpgrades: true,
+      condition: ()=> state.super.charge >= state.super.max },
+    { id:'forceSuperDischarge', type:'wait-action',
+      text:"Fully charged! Tap Unleash to hit every enemy on screen at once.",
+      highlightId:'superBtn' },
+    { id:'outro', type:'modal',
+      title:"Systems Online",
+      text:"Hold this ground, strip the planet for resources, and your nav computer can start plotting a course home. Watch for the mini-boss at wave 10 and the planet boss at wave 20 — clearing it unlocks the next world. Here's a little something to get you started — +50 coins, +10 gems." },
+  ];
+
+  function applyTutorialButtonRestrictions(){
+    if (!state.tutorial.active) return;
+    const step = tutorialSteps[state.tutorial.step];
+    if (!step || step.type === 'modal') return; // modal backdrop already blocks everything underneath
+
+    // Continuously re-lock every non-required bottom button, every frame — a
+    // persistent invariant, not a one-time application at step-start, so
+    // nothing can slip through between step transitions.
+    const upgradeBtnIds = ['turretUpgBtn','droneUpgBtn','shipUpgBtn'];
+    ['pauseBtn','speedBtn','superBtn', ...upgradeBtnIds].forEach(id=>{
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (id === step.highlightId || (step.freeUpgrades && upgradeBtnIds.includes(id))) el.classList.remove('tutorialDim');
+      else el.classList.add('tutorialDim');
+    });
+
+    // Once free upgrades are unlocked (after the shield-regen step), the player
+    // may browse and buy ANY upgrade they can afford — no drawer restrictions,
+    // so they can shore up defenses while waiting for the super to charge.
+    if (step.freeUpgrades) return;
+    if (!step.restrictKind) return;
+
+    // lock the drawer's own category tabs to only the relevant one
+    document.querySelectorAll('.drawerTab').forEach(tab=>{
+      if (tab.dataset.cat === step.restrictCategory) tab.classList.remove('tutorialDim');
+      else tab.classList.add('tutorialDim');
+    });
+
+    if (step.restrictKind === 'upgrade'){
+      document.querySelectorAll('.upBuy').forEach(btn=>{
+        if (btn.dataset.key === step.restrictKey) btn.classList.add('tutorialHighlight');
+        else { btn.classList.remove('tutorialHighlight'); btn.classList.add('tutorialDim'); }
+      });
+    } else if (step.restrictKind === 'drone'){
+      document.querySelectorAll('.droneBuy').forEach(btn=>{
+        if (btn.dataset.drone === step.restrictKey) btn.classList.add('tutorialHighlight');
+        else { btn.classList.remove('tutorialHighlight'); btn.classList.add('tutorialDim'); }
+      });
+    }
+  }
+
+  function clearTutorialUI(){
+    document.querySelectorAll('.tutorialHighlight').forEach(el=>el.classList.remove('tutorialHighlight'));
+    document.querySelectorAll('.tutorialDim').forEach(el=>el.classList.remove('tutorialDim'));
+    const card = document.getElementById('tutorialCard'); if (card) card.remove();
+    const modal = document.getElementById('tutorialModalBackdrop'); if (modal) modal.remove();
+  }
+
+  function renderTutorialModal(step){
+    const label = step.buttonLabel || (step.id==='outro' ? 'Defend the ship!' : step.id==='explainShip' ? 'Next' : "Let's go");
+    const wrap = document.createElement('div');
+    wrap.id = 'tutorialModalBackdrop';
+    wrap.innerHTML = `<div class="card"><h2>${step.title}</h2><p>${step.text}</p>
+      <button id="tutorialModalBtn">${label}</button>
+      <button class="tutorialSkip" id="tutorialSkipBtn">Skip tutorial</button></div>`;
+    document.getElementById('canvasWrap').appendChild(wrap);
+    document.getElementById('tutorialModalBtn').onclick = advanceTutorial;
+    document.getElementById('tutorialSkipBtn').onclick = finishTutorial;
+  }
+
+
+  function renderTutorialCard(step){
+    const card = document.createElement('div');
+    card.id = 'tutorialCard';
+    card.innerHTML = `${step.text}<button class="tutorialSkip" id="tutorialSkipBtn2">Skip tutorial</button>`;
+    document.getElementById('sideBars').appendChild(card);
+    document.getElementById('tutorialSkipBtn2').onclick = finishTutorial;
+    if (step.highlightId){
+      const target = document.getElementById(step.highlightId);
+      if (target) target.classList.add('tutorialHighlight');
+    }
+    applyTutorialButtonRestrictions();
+  }
+
+  function renderTutorialStep(){
+    closeDrawer();
+    clearTutorialUI();
+    if (!state.tutorial.active) return;
+    const step = tutorialSteps[state.tutorial.step];
+    if (step.type === 'modal') renderTutorialModal(step);
+    else renderTutorialCard(step);
+  }
+
+  function advanceTutorial(){
+    state.tutorial.step += 1;
+    if (state.tutorial.step >= tutorialSteps.length) finishTutorial();
+    else renderTutorialStep();
+  }
+
+  function finishTutorial(){
+    clearTutorialUI();
+    if (!state.tutorial.done){ state.coins += 50; state.gems += 10; }
+    state.tutorial.active = false;
+    state.tutorial.done = true;
+    updateUI();
+    saveGame();
+  }
+
+  function checkTutorialProgress(){
+    if (!state.tutorial.active) return;
+    const step = tutorialSteps[state.tutorial.step];
+    if (step.type === 'wait-action' && step.condition && step.condition()) advanceTutorial();
+  }
+
+  document.getElementById('turretUpgBtn').onclick = ()=>openDrawer('turret');
+  document.getElementById('droneUpgBtn').onclick = ()=>openDrawer('drones');
+  document.getElementById('shipUpgBtn').onclick = ()=>openDrawer('ship');
+  document.getElementById('launchpadUpgBtn').onclick = ()=>{
+    if (state.padIntro){
+      // Pad tapped — intro complete, clear the highlight/card and resume
+      state.padIntro = false;
+      state.earthPadIntroDone = true;
+      const b = document.getElementById('launchpadUpgBtn');
+      if (b) b.classList.remove('tutorialHighlight');
+      const cardEl = document.getElementById('tutorialCard');
+      if (cardEl) cardEl.remove();
+      saveGame();
+    }
+    openDrawer('launchpad');
+  };
+  drawerTabs.forEach(tab => { tab.onclick = ()=>openDrawer(tab.dataset.cat); });
+  document.getElementById('drawerClose').onclick = closeDrawer;
+  drawerBackdrop.onclick = closeDrawer;
+
+  // ---------- State ----------
+  const state = {
+    coins: 0, gems: 20,
+    wave: 1, waveActive: false, bestWave: 1,
+    enemies: [], projectiles: [],
+    prestige: 0,
+    revivesUsed: 0, maxRevives: 5, freeRevivesPerDay: 2,
+    reviveBudget: { date: null, used: [0,0,0,0,0] },
+    coinMultiplier: 1, enemyMultiplier: 1,
+    doubleCoinsThisWave: false,
+    droneDebuff: false, droneAttack: false,
+    droneEffects: [], droneAngle: 0,
+    superPulses: [],
+    cosmetics: { crimsonHull:false, ionTrail:false },
+    metaLevel: { fireRate:0, damage:0, crit:0, range:0, shieldCap:0, shieldRegen:0 },
+    metaMult: { fireRate:1, damage:1, crit:1, range:1, shieldCap:1, shieldRegen:1 },
+    currentPlanetIndex: 0,
+    planetProgress: [
+      { wave:1, prestige:0, enemyMultiplier:1, coinMultiplier:1, bestWave:1, completed:false, visited:true, coins:0 },
+      { wave:1, prestige:0, enemyMultiplier:1, coinMultiplier:1, bestWave:1, completed:false, visited:false, coins:0 },
+      { wave:1, prestige:0, enemyMultiplier:1, coinMultiplier:1, bestWave:1, completed:false, visited:false, coins:0 },
+      { wave:1, prestige:0, enemyMultiplier:1, coinMultiplier:1, bestWave:1, completed:false, visited:false, coins:0 },
+      { wave:1, prestige:0, enemyMultiplier:1, coinMultiplier:1, bestWave:1, completed:false, visited:false, coins:0 },
+    ],
+    unlockedPlanets: [true, false, false, false, false],
+    turret: { fireRateLvl:0, dmgLvl:0, critLvl:0, rangeLvl:0, tierBonus:1 },
+    ship: { shieldCapLvl:0, shieldRegenLvl:0 },
+    super: { charge:0, max:100 },
+    padRepair: 0, padTurrets: 0, padCalibration: 0, padJets: 0, padShield: 0,
+    adTickets: 0, earthVictoryClaimed: false,
+    jetRuns: [], nextJetAt: 0, cornerLastFire: [0,0,0,0],
+    padIntro: false, earthPadIntroDone: false,
+    hp: { shield:0, maxShield:0 },
+    lastFire: 0,
+    gameSpeed: 1,
+    devMode: false,
+    totalKills: 0,
+    settings: { vibrationEnabled: true, soundEnabled: true },
+    tutorial: { active:false, done:false, step:0, superDischarged:false },
+    dailyLogin: { streak:0, lastClaimDate:null },
+    gameOverShown:false, firstInit:false,
+  };
+
+  const upgradeCfg = {
+    fireRate:   { base:20, growth:1.18, owner:'turret', lvlKey:'fireRateLvl', maxLevel:20 },
+    damage:     { base:15, growth:1.18, owner:'turret', lvlKey:'dmgLvl', maxLevel:20 },
+    crit:       { base:25, growth:1.22, owner:'turret', lvlKey:'critLvl', maxLevel:20 },
+    range:      { base:18, growth:1.16, owner:'turret', lvlKey:'rangeLvl', maxLevel:15 },
+    shieldCap:  { base:20, growth:1.2,  owner:'ship',   lvlKey:'shieldCapLvl', maxLevel:20 },
+    shieldRegen:{ base:25, growth:1.2,  owner:'ship',   lvlKey:'shieldRegenLvl', maxLevel:20 },
+  };
+
+  function cost(key){
+    const c = upgradeCfg[key];
+    const owner = state[c.owner];
+    return Math.round(c.base * Math.pow(c.growth, owner[c.lvlKey]));
+  }
+
+  // ---------- Launchpad (Earth only) — five independent upgrade tracks ----------
+  // Repair Crew (+25% shield regen, one-time) · Corner Turrets (build one per
+  // corner, each ~40% of main turret damage) · Turret Calibration (+50% corner
+  // dmg per level, needs a turret) · Fighter Squadron (more jets, faster sorties)
+  // · Shield Generator (+35% shield cap AND regen per level, compounding — the
+  // late-wave defense lever the base game lacks).
+  // Coin-priced, steep exponential — the wave 30-100 grind.
+  const launchpadCfg = {
+    repair:      { base:150,  growth:1,   maxLevel:1 },
+    turrets:     { base:255,  growth:1.7, maxLevel:4 },
+    calibration: { base:2128, growth:1.7, maxLevel:3 },
+    jets:        { base:6000, growth:1.7, maxLevel:3 },
+    shield:      { base:3000, growth:1.8, maxLevel:5 },
+  };
+  const padStateKey = { repair:'padRepair', turrets:'padTurrets', calibration:'padCalibration', jets:'padJets', shield:'padShield' };
+  function padLevel(track){ return state[padStateKey[track]] || 0; }
+  function padCost(track){ const cfg = launchpadCfg[track]; return Math.round(cfg.base * Math.pow(cfg.growth, padLevel(track))); }
+  function launchpadTurretCount(){ return padLevel('turrets'); }
+  function launchpadTurretDmgMult(){ return Math.pow(1.5, padLevel('calibration')); }
+  function launchpadJetInterval(){ return padLevel('jets') >= 3 ? 30000 : 45000; }
+  function launchpadJetCount(){ return padLevel('jets'); }
+  function launchpadShieldMult(){ return Math.pow(1.35, padLevel('shield')); } // x4.48 shield cap/regen at Lv5
+  function launchpadTurretPos(i){
+    const cx=VIEW_W/2, cy=VIEW_H/2, off=62;
+    const pos = [[off,-off],[off,off],[-off,off],[-off,-off]]; // NE, SE, SW, NW
+    return { x: cx+pos[i][0], y: cy+pos[i][1] };
+  }
+  function nearestEnemyTo(x, y){
+    let best=null, bestD=Infinity;
+    for (const e of state.enemies){ const d=Math.hypot(e.x-x, e.y-y); if (d<bestD){bestD=d;best=e;} }
+    return best ? {enemy:best, dist:bestD} : {enemy:null, dist:Infinity};
+  }
+
+  const metaUpgradeCfg = {
+    fireRate:   { base:15, growth:1.35 },
+    damage:     { base:15, growth:1.35 },
+    crit:       { base:20, growth:1.4 },
+    range:      { base:15, growth:1.35 },
+    shieldCap:  { base:15, growth:1.35 },
+    shieldRegen:{ base:18, growth:1.35 },
+  };
+  function metaCost(key){
+    const c = metaUpgradeCfg[key];
+    return Math.round(c.base * Math.pow(c.growth, state.metaLevel[key]));
+  }
+  function buyMeta(key){
+    const c = metaCost(key);
+    if (state.gems < c) return;
+    state.gems -= c;
+    state.metaLevel[key] += 1;
+    state.metaMult[key] = 1 + state.metaLevel[key] * 0.1;
+    SFX.buy();
+    updateUI();
+  }
+
+  function computedStats(){
+    const mm = state.metaMult;
+    const dmg = (8 + state.turret.dmgLvl * 4) * state.turret.tierBonus * mm.damage;
+    const fireInterval = Math.max(120, (650 - state.turret.fireRateLvl * 28) / mm.fireRate);
+    const critChance = Math.min(0.6, state.turret.critLvl * 0.02 * mm.crit);
+    const padShieldMult = isEarth() ? launchpadShieldMult() : 1; // pad Shield Generator (Earth only)
+    const maxShield = (60 + state.ship.shieldCapLvl * 18) * mm.shieldCap * padShieldMult;
+    const shieldRegen = (0.4 + state.ship.shieldRegenLvl * 0.25) * mm.shieldRegen * padShieldMult
+      * ((isEarth() && state.padRepair >= 1) ? 1.25 : 1); // launchpad repair crew
+    const range = (150 + state.turret.rangeLvl * 14) * mm.range;
+    return { dmg, fireInterval, critChance, maxShield, shieldRegen, range };
+  }
+
+  // ---------- Planets ----------
+  const planets = [
+    {
+      name:'Planet I', subtitle:'Verdant Overgrowth',
+      blurb:'The wormhole spat you out here — first stop, no choice about it. Scavenge what you can and get moving.',
+      enemyColor:'#4fd97a', enemyDark:'#2f8f4e', bossColor:'#c084fc',
+      groundBase:'#0e2213', clearingOuter:'#2c4a24', clearingInner:'#5c4a30',
+      featureDark:'#123018', featureMid:'#1c4423', featureHi:'#2c5c30',
+      ambient:'rgba(255,235,150,0.6)'
+    },
+    {
+      name:'Planet II', subtitle:'Ember Wastes',
+      blurb:"Your tank ran dry mid-hop. This world's close enough to reach — set down, refuel, and keep moving.",
+      enemyColor:'#ff8c52', enemyDark:'#8a2e12', bossColor:'#c084fc',
+      groundBase:'#1a0f0a', clearingOuter:'#4a2418', clearingInner:'#6b3220',
+      featureDark:'#241109', featureMid:'#3c1810', featureHi:'#5a2412',
+      ambient:'rgba(255,140,60,0.7)'
+    },
+    {
+      name:'Planet III', subtitle:'Frostbound Reach',
+      blurb:"Ice is jamming the intake valves. Set down, thaw the lines, and scavenge what the cold hasn't buried.",
+      enemyColor:'#bff0fa', enemyDark:'#3a7a94', bossColor:'#c084fc',
+      groundBase:'#0a1826', clearingOuter:'#1c3a52', clearingInner:'#3a6b8a',
+      featureDark:'#14283a', featureMid:'#2a4f6b', featureHi:'#7dd3e8',
+      ambient:'rgba(220,240,255,0.75)'
+    },
+    {
+      name:'Planet IV', subtitle:'Scorched Dunes',
+      blurb:"The heat's cooking your coolant lines. One more stop to patch up before the final push home.",
+      enemyColor:'#e8c078', enemyDark:'#8a5a28', bossColor:'#c084fc',
+      groundBase:'#3a2a14', clearingOuter:'#5c4222', clearingInner:'#8a6838',
+      featureDark:'#2c1f10', featureMid:'#5c4526', featureHi:'#c9a05a',
+      ambient:'rgba(255,225,160,0.6)'
+    },
+    {
+      name:'Earth', subtitle:'Last Stand',
+      blurb:"Home. But the rulers of the worlds you beat aren't done with you — they're sending everything they have through the wormhole. You've landed on an old launchpad — fortify it with corner turrets and a fighter squadron. Hold the shore for 100 waves and the breach closes for good.",
+      enemyColor:'#7ec9a8', enemyDark:'#2f5c48', bossColor:'#c084fc',
+      groundBase:'#0c1f16', clearingOuter:'#1a5c78', clearingInner:'#2f8fae',
+      featureDark:'#0e2a1c', featureMid:'#1c4a2e', featureHi:'#3a7a4a',
+      ambient:'rgba(255,244,200,0.55)'
+    },
+  ];
+  function activePlanet(){ return planets[state.currentPlanetIndex]; }
+  function isEarth(){ return state.currentPlanetIndex === 4; }
+
+  // ---------- Terrain detail rendering ----------
+  function drawJungleTree(c, fx, fy, f, pt){
+    const trunkH = f.r*0.9;
+    const trunkW = Math.max(2.5, f.r*0.13);
+
+    // ground shadow
+    c.beginPath(); c.ellipse(fx, fy+trunkH*0.15, f.r*0.85, f.r*0.28, 0, 0, Math.PI*2);
+    c.fillStyle = 'rgba(0,0,0,0.28)'; c.fill();
+
+    // trunk (slightly tapered)
+    c.beginPath();
+    c.moveTo(fx-trunkW, fy);
+    c.lineTo(fx-trunkW*0.55, fy-trunkH);
+    c.lineTo(fx+trunkW*0.55, fy-trunkH);
+    c.lineTo(fx+trunkW, fy);
+    c.closePath();
+    c.fillStyle = '#3b2a17'; c.fill();
+
+    // canopy — three overlapping blobs at varying heights/shades for depth
+    const canopyY = fy - trunkH;
+    const layers = [
+      { ox:-f.r*0.32, oy:0.08, s:0.62, col:pt.featureDark },
+      { ox:f.r*0.30,  oy:0.10, s:0.6,  col:pt.featureMid },
+      { ox:0,         oy:-0.22,s:0.72, col:pt.featureHi },
+    ];
+    for (const l of layers){
+      c.beginPath();
+      c.arc(fx+l.ox, canopyY+f.r*l.oy, f.r*l.s, 0, Math.PI*2);
+      c.fillStyle = l.col; c.fill();
+    }
+    // dappled highlight
+    c.beginPath();
+    c.arc(fx-f.r*0.15, canopyY-f.r*0.28, f.r*0.22, 0, Math.PI*2);
+    c.fillStyle = 'rgba(255,255,255,0.08)'; c.fill();
+  }
+
+  function drawGrassTuft(c, gx, gy, g, pt){
+    c.strokeStyle = pt.featureHi; c.lineWidth = 1.4*g.scale;
+    for (let i=0;i<3;i++){
+      const a = -Math.PI/2 + (i-1)*0.45 + Math.sin(g.seed+i)*0.12;
+      const len = 7*g.scale;
+      c.beginPath();
+      c.moveTo(gx, gy);
+      c.quadraticCurveTo(gx+Math.cos(a)*len*0.5, gy+Math.sin(a)*len*0.7, gx+Math.cos(a)*len, gy+Math.sin(a)*len);
+      c.stroke();
+    }
+  }
+
+  function drawLavaRockSpire(c, fx, fy, f, pt, t){
+    const h = f.r*1.3;
+    // shadow
+    c.beginPath(); c.ellipse(fx, fy+6, f.r*0.8, f.r*0.24, 0, 0, Math.PI*2);
+    c.fillStyle = 'rgba(0,0,0,0.35)'; c.fill();
+
+    // jagged rock silhouette, deterministic per spire
+    const sides = 6;
+    const pts = [];
+    for (let i=0;i<=sides;i++){
+      const frac = i/sides;
+      const jag = 0.7 + 0.3*Math.sin(f.seed + i*2.1);
+      const width = f.r*(1-frac*0.75)*jag;
+      pts.push([fx + (i%2===0?-1:1)*width*0.5, fy - h*frac]);
+    }
+    c.beginPath();
+    c.moveTo(fx-f.r*0.55, fy);
+    for (const p of pts) c.lineTo(p[0], p[1]);
+    c.lineTo(fx+f.r*0.55, fy);
+    c.closePath();
+    const rockGrad = c.createLinearGradient(0, fy-h, 0, fy);
+    rockGrad.addColorStop(0, pt.featureHi); rockGrad.addColorStop(1, pt.featureDark);
+    c.fillStyle = rockGrad; c.fill();
+    c.strokeStyle = 'rgba(0,0,0,0.4)'; c.lineWidth = 1.2; c.stroke();
+
+    // glowing magma vein up the spire
+    const glowPulse = 0.6 + 0.4*Math.sin(t*0.004 + f.seed);
+    c.strokeStyle = `rgba(255,140,60,${glowPulse})`;
+    c.lineWidth = Math.max(1, f.r*0.06);
+    c.beginPath();
+    c.moveTo(fx, fy-2);
+    for (let i=1;i<pts.length;i+=2) c.lineTo(pts[i][0]*0.4+fx*0.6, pts[i][1]);
+    c.stroke();
+
+    // molten tip glow
+    c.beginPath();
+    c.arc(fx, fy-h, f.r*0.16*glowPulse+f.r*0.08, 0, Math.PI*2);
+    c.fillStyle = `rgba(255,160,70,${0.5*glowPulse})`; c.fill();
+  }
+
+  function drawLavaCrack(c, gx, gy, g, t){
+    const glowPulse = 0.5 + 0.5*Math.sin(t*0.003 + g.seed);
+    const len = 14*g.scale;
+    const a = g.seed % (Math.PI*2);
+    c.strokeStyle = `rgba(255,120,50,${0.35+0.4*glowPulse})`;
+    c.lineWidth = 1.6*g.scale;
+    c.beginPath();
+    c.moveTo(gx-Math.cos(a)*len*0.5, gy-Math.sin(a)*len*0.3);
+    c.lineTo(gx+Math.cos(a*1.4)*len*0.2, gy+Math.sin(a*1.4)*len*0.2);
+    c.lineTo(gx+Math.cos(a)*len*0.5, gy+Math.sin(a)*len*0.3);
+    c.stroke();
+  }
+
+  function drawIceSpire(c, fx, fy, f, pt, t){
+    const h = f.r*1.5;
+    c.beginPath(); c.ellipse(fx, fy+5, f.r*0.7, f.r*0.2, 0, 0, Math.PI*2);
+    c.fillStyle = 'rgba(0,10,20,0.3)'; c.fill();
+
+    // angular crystal shard silhouette, deterministic per spire
+    const sides = 5;
+    const pts = [];
+    for (let i=0;i<=sides;i++){
+      const frac = i/sides;
+      const jag = 0.75 + 0.25*Math.sin(f.seed + i*3.3);
+      const width = f.r*(1-frac*0.8)*jag;
+      pts.push([fx + (i%2===0?-1:1)*width*0.45, fy - h*frac]);
+    }
+    c.beginPath();
+    c.moveTo(fx-f.r*0.4, fy);
+    for (const p of pts) c.lineTo(p[0], p[1]);
+    c.lineTo(fx+f.r*0.4, fy);
+    c.closePath();
+    const iceGrad = c.createLinearGradient(0, fy-h, 0, fy);
+    iceGrad.addColorStop(0, pt.featureHi); iceGrad.addColorStop(1, pt.featureDark);
+    c.fillStyle = iceGrad; c.fill();
+    c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 1; c.stroke();
+
+    // inner facet line for a crystalline look
+    c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = Math.max(1, f.r*0.05);
+    c.beginPath();
+    c.moveTo(fx, fy-2);
+    c.lineTo(fx, fy-h*0.9);
+    c.stroke();
+
+    // cold sparkle at the tip
+    const glowPulse = 0.5 + 0.5*Math.sin(t*0.004 + f.seed);
+    c.beginPath();
+    c.arc(fx, fy-h, f.r*0.12*glowPulse+f.r*0.06, 0, Math.PI*2);
+    c.fillStyle = `rgba(200,240,255,${0.6*glowPulse})`; c.fill();
+  }
+
+  function drawFrostGlint(c, gx, gy, g, t){
+    const glowPulse = 0.5 + 0.5*Math.sin(t*0.003 + g.seed);
+    const len = 10*g.scale;
+    const a = g.seed % (Math.PI*2);
+    c.strokeStyle = `rgba(210,240,255,${0.3+0.35*glowPulse})`;
+    c.lineWidth = 1.3*g.scale;
+    for (let i=0;i<3;i++){
+      const a2 = a + i*(Math.PI*2/3);
+      c.beginPath();
+      c.moveTo(gx, gy);
+      c.lineTo(gx+Math.cos(a2)*len*0.5, gy+Math.sin(a2)*len*0.5);
+      c.stroke();
+    }
+  }
+
+  function drawSandDune(c, fx, fy, f, pt){
+    c.beginPath(); c.ellipse(fx, fy+5, f.r*0.9, f.r*0.22, 0, 0, Math.PI*2);
+    c.fillStyle = 'rgba(20,12,4,0.25)'; c.fill();
+
+    // layered mound silhouette
+    const layers = [
+      { s:0.95, h:0.28, col:pt.featureDark },
+      { s:0.72, h:0.55, col:pt.featureMid },
+      { s:0.44, h:0.85, col:pt.featureHi },
+    ];
+    for (const l of layers){
+      c.beginPath();
+      c.ellipse(fx - f.r*0.08, fy - f.r*l.h*0.5, f.r*l.s, f.r*l.h*0.6, 0, Math.PI, Math.PI*2);
+      c.fillStyle = l.col; c.fill();
+    }
+
+    // wind-ripple lines on the mound face
+    c.strokeStyle = 'rgba(0,0,0,0.15)'; c.lineWidth = 1;
+    for (let i=0;i<3;i++){
+      c.beginPath();
+      c.ellipse(fx - f.r*0.08, fy - f.r*0.15 - i*f.r*0.12, f.r*(0.6-i*0.12), f.r*0.1, 0, Math.PI*0.15, Math.PI*0.85);
+      c.stroke();
+    }
+  }
+
+  function drawSandRipple(c, gx, gy, g){
+    c.strokeStyle = 'rgba(0,0,0,0.18)'; c.lineWidth = 1.2*g.scale;
+    const a = g.seed % (Math.PI*2);
+    const len = 12*g.scale;
+    c.beginPath();
+    c.moveTo(gx-Math.cos(a)*len*0.5, gy);
+    c.quadraticCurveTo(gx, gy-3*g.scale, gx+Math.cos(a)*len*0.5, gy);
+    c.stroke();
+  }
+
+  function waveEnemyCount(w){
+    const base = 5 + Math.floor(w * 1.6);
+    const extra = Math.round(state.prestige * 1.6 * prestigeWaveWeight(w));
+    return base + extra;
+  }
+  function isMiniBossWave(w){
+    if (isEarth()) return w % 10 === 0 && w % 20 !== 0;
+    return w === 10;
+  }
+  function isBossWave(w){
+    if (isEarth()) return w % 20 === 0;
+    return w === 20;
+  }
+
+  // How much of the prestige toughness bonus applies to a given wave.
+  // Early waves (1-8) get amplified prestige difficulty; it tapers back to
+  // normal by wave 15 so the wave-20 boss isn't compounded further.
+  function prestigeWaveWeight(wave){
+    if (wave <= 8) return 1.4;
+    if (wave >= 15) return 1.0;
+    const t = (wave-8)/(15-8);
+    return 1.4 - t*0.4;
+  }
+
+  function enemyStatsFor(wave){
+    const scale = 1 + wave * 0.09;
+    const weight = prestigeWaveWeight(wave);
+    const mult = 1 + (state.enemyMultiplier-1) * weight;
+    let hp = 18 * scale * mult;
+    let speed = 0.35 + wave * 0.01;
+    let dmg = 4 * scale * mult;
+    let radius = 11;
+    let kind = 'grunt';
+    let coinValue = Math.round((3 + wave * 0.6) * state.coinMultiplier);
+    if (isMiniBossWave(wave)) { hp*=9; speed*=0.75; dmg*=2.4; radius=26; kind='miniboss'; coinValue*=12; }
+    if (isBossWave(wave)) { hp*=22; speed*=0.65; dmg*=3.2; radius=36; kind='boss'; coinValue*=30; }
+    return { hp, maxHp:hp, speed, dmg, radius, kind, coinValue };
+  }
+
+  const SHIELD_TOUCH_RADIUS = 30*1.5/1.15; // matches the shield ring drawn in drawShip (ship scale 1.5 in battle)
+
+  function spawnWave(){
+    state.enemies = [];
+    state.waveActive = true;
+    // Earth squadron: arm the first strafing run ~6s into the wave — enemies are
+    // closing in by then, so the run always has targets (never a wasted flyby).
+    if (isEarth() && state.padJets >= 1) state.nextJetAt = simTime + 4000;
+    const isBossType = isMiniBossWave(state.wave) || isBossWave(state.wave);
+    const count = isBossType ? 1 : waveEnemyCount(state.wave);
+    const angleStep = (Math.PI * 2) / count;
+    const playerStats = computedStats();
+    for (let i=0;i<count;i++){
+      const angle = i*angleStep + (Math.random()-0.5)*angleStep*0.6;
+      const stats = enemyStatsFor(state.wave);
+      let dist;
+      if (isBossType){
+        // rangeFactor: 1.6x range at Lv0 (spawns well outside range, real approach phase)
+        // down to 0.85x range at Lv15 max (spawns already inside firing range)
+        const rangeFactor = 1.6 - (state.turret.rangeLvl/15)*0.75;
+        const maxDist = Math.max(Math.max(VIEW_W, VIEW_H) * 0.9, 480);
+        dist = Math.min(playerStats.range * rangeFactor * (0.9 + Math.random()*0.2), maxDist);
+      } else {
+        // scale with turret range so upgrades don't make enemies pop in already inside it.
+        // depth bands keep the wave layered rather than arriving as one flat ring.
+        const depthBands = [[1.15,1.35],[1.35,1.6],[1.6,1.9]];
+        const band = depthBands[i % depthBands.length];
+        const rangeFactor = band[0] + Math.random()*(band[1]-band[0]);
+        const minDist = Math.max(VIEW_W, VIEW_H) * 0.42;
+        dist = Math.max(playerStats.range * rangeFactor, minDist);
+      }
+      const cx = VIEW_W/2, cy = VIEW_H/2;
+      // stagger hold distances into concentric rings so a wave forms layers around
+      // the ship instead of every enemy crowding the exact same radius
+      const ringIndex = i % 3;
+      const ringGap = stats.radius*2 + 6;
+      state.enemies.push({
+        id: Math.random().toString(36).slice(2),
+        x: cx + Math.cos(angle)*dist, y: cy + Math.sin(angle)*dist,
+        legPhase: Math.random()*Math.PI*2, wobble: 0.6+Math.random()*0.8,
+        holdRadius: SHIELD_TOUCH_RADIUS + stats.radius + ringIndex*ringGap + Math.random()*8,
+        originPlanet: isEarth() ? Math.floor(Math.random()*4) : state.currentPlanetIndex,
+        ...stats
+      });
+    }
+    updateUI();
+  }
+
+  function nearestEnemy(){
+    const cx=VIEW_W/2, cy=VIEW_H/2; let best=null, bestD=Infinity;
+    for (const e of state.enemies){ const d=Math.hypot(e.x-cx,e.y-cy); if (d<bestD){bestD=d;best=e;} }
+    return {enemy:best, dist:bestD};
+  }
+
+  function randomEnemyInRange(cx, cy, range){
+    const inRange = state.enemies.filter(e => Math.hypot(e.x-cx, e.y-cy) <= range);
+    if (!inRange.length) return null;
+    return inRange[Math.floor(Math.random()*inRange.length)];
+  }
+
+  // ---------- Sound (WebAudio — no asset files, tiny synth blips) ----------
+  const SFX = (()=>{
+    let ctx = null;
+    function ac(){
+      if (!ctx){ try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ return null; } }
+      if (ctx.state === 'suspended') ctx.resume();
+      return ctx;
+    }
+    function tone(freq, dur, type, vol, slideTo, delay){
+      if (!state.settings.soundEnabled) return;
+      const a = ac(); if (!a) return;
+      const t0 = a.currentTime + (delay||0);
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = type||'sine';
+      o.frequency.setValueAtTime(freq, t0);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t0+dur);
+      g.gain.setValueAtTime(vol||0.12, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+      o.connect(g); g.connect(a.destination);
+      o.start(t0); o.stop(t0+dur+0.03);
+    }
+    // throttle the high-frequency sounds so max fire-rate / mass kills don't buzz
+    let lastShot = -1e9, lastKill = -1e9, lastJet = -1e9;
+    return {
+      shot(){ if (simTime-lastShot < 90) return; lastShot = simTime; tone(880, 0.05, 'square', 0.045, 240); },
+      kill(){ if (simTime-lastKill < 70) return; lastKill = simTime; tone(320, 0.07, 'triangle', 0.1, 90); },
+      jet(){  if (simTime-lastJet < 140) return; lastJet = simTime; tone(1300, 0.05, 'sawtooth', 0.035, 650); },
+      super(){ tone(220, 0.5, 'sawtooth', 0.16, 45); tone(440, 0.4, 'square', 0.09, 110, 0.05); },
+      waveClear(){ [523, 659, 784].forEach((fq,i)=>tone(fq, 0.14, 'sine', 0.11, null, i*0.09)); },
+      victory(){ [523, 659, 784, 1047, 784, 1047].forEach((fq,i)=>tone(fq, 0.22, 'triangle', 0.13, null, i*0.13)); },
+      revive(){ tone(300, 0.3, 'sine', 0.12, 900); },
+      buy(){ tone(700, 0.07, 'sine', 0.09, 1050); },
+    };
+  })();
+
+  function fireAt(target, stats){
+    const cx=VIEW_W/2, cy=VIEW_H/2;
+    state.projectiles.push({ x:cx, y:cy, targetId:target.id, speed:8, dmg:stats.dmg, crit: Math.random()<stats.critChance });
+    SFX.shot();
+  }
+
+  function damageEnemy(e, amount){
+    e.hp -= amount;
+    if (e.hp <= 0){
+      state.coins += e.coinValue * (state.doubleCoinsThisWave ? 2 : 1);
+      state.totalKills = (state.totalKills||0) + 1;
+      SFX.kill();
+      // Charge scales inversely with wave size so filling the meter always costs
+      // roughly the same *number of waves* (~2.5), not the same number of kills —
+      // otherwise later waves (and prestige runs) hand out a free super every wave.
+      const WAVES_PER_SUPER = isEarth() ? 1.5 : 2.5; // Earth: more panic-button coverage in the late grind
+      const waveSize = Math.max(1, waveEnemyCount(state.wave));
+      const baseCharge = state.super.max / (WAVES_PER_SUPER * waveSize);
+      const killCharge = e.kind==='boss' ? state.super.max * 0.5
+                       : e.kind==='miniboss' ? state.super.max * 0.3
+                       : baseCharge;
+      state.super.charge = Math.min(state.super.max, state.super.charge + (state.tutorial.active ? killCharge*3 : killCharge));
+      state.enemies = state.enemies.filter(x=>x.id!==e.id);
+      if (state.enemies.length===0 && state.waveActive) onWaveClear();
+    }
+  }
+
+  // Wave-advance delay, made cancellable + token-checked: switching planets,
+  // restarting, reviving or prestiging during the 1.2s gap between waves must
+  // never advance (and spawn a wave on) the wrong planet.
+  let waveAdvanceTimer = null;
+  let waveAdvanceToken = 0;
+  function cancelWaveAdvance(){
+    waveAdvanceToken++;
+    if (waveAdvanceTimer){ clearTimeout(waveAdvanceTimer); waveAdvanceTimer = null; }
+  }
+  function scheduleWaveAdvance(){
+    const token = ++waveAdvanceToken;
+    waveAdvanceTimer = setTimeout(()=>{
+      waveAdvanceTimer = null;
+      if (token !== waveAdvanceToken) return; // run was reset/switched while waiting
+      state.wave += 1; state.bestWave = Math.max(state.bestWave, state.wave); spawnWave();
+    }, 1200);
+  }
+  function onWaveClear(){
+    state.waveActive = false;
+    state.doubleCoinsThisWave = false;
+    SFX.waveClear();
+    if (isEarth()){
+      if (state.wave >= 100){ showEarthVictory(); return; }
+      // Wave cleared: scrub any pending strafing run so jets never fire into an
+      // empty field. spawnWave re-arms the squadron for the next wave.
+      state.jetRuns = [];
+      state.nextJetAt = 0;
+      scheduleWaveAdvance();
+      return;
+    }
+    if (isBossWave(state.wave)){ showPlanetComplete(); return; }
+    scheduleWaveAdvance();
+  }
+
+  function showEarthVictory(){
+    state.bestWave = Math.max(state.bestWave, state.wave);
+    // One-time victory reward: 50 gems + 3 ad-skip tickets. Replay victories
+    // still get the splash, but the reward only pays out once.
+    const firstTime = !state.earthVictoryClaimed;
+    if (firstTime){
+      state.earthVictoryClaimed = true;
+      state.gems += 50;
+      state.adTickets += 3;
+    }
+    saveGame();
+    updateUI();
+    document.getElementById('vsRewards').style.display = firstTime ? '' : 'none';
+    document.getElementById('vsSub').innerHTML = firstTime
+      ? "Wave 100. The last of the wormhole's forces falls, and the breach finally, truly closes. Earth is safe — for good this time. <b>You've beaten the game!</b> 🌍"
+      : "You held the shore for all 100 waves again. The wormhole stays closed. 🌍";
+    document.getElementById('victorySplash').classList.add('open');
+    SFX.victory();
+  }
+  document.getElementById('vsRestartBtn').onclick = ()=>{
+    document.getElementById('victorySplash').classList.remove('open');
+    restartPlanet();
+  };
+  document.getElementById('vsHomeBtn').onclick = ()=>{
+    document.getElementById('victorySplash').classList.remove('open');
+    showScreen('home');
+  };
+
+  function unleashSuper(){
+    if (state.super.charge < state.super.max) return;
+    SFX.super();
+    const stats = computedStats();
+    const hitDmg = stats.dmg * 5;
+    const cx = VIEW_W/2, cy = VIEW_H/2;
+    for (const e of [...state.enemies]){
+      damageEnemy(e, hitDmg);
+      if (e.hp > 0){
+        const dx = e.x-cx, dy = e.y-cy, d = Math.hypot(dx,dy) || 1;
+        const knockback = e.kind==='boss' ? 25 : e.kind==='miniboss' ? 35 : 55;
+        e.x += (dx/d)*knockback;
+        e.y += (dy/d)*knockback;
+        e.stunnedUntil = simTime + 1200;
+      }
+    }
+    state.superPulses.push({ start: simTime });
+    state.super.charge = 0;
+  }
+
+  // ---------- Loop ----------
+  let lastTick = performance.now();
+  let shieldTickAccum = 0, droneTickAccum = 0, debuffDroneTickAccum = 0;
+  let simTime = 0;
+  let lastDamageVibrateTime = 0;
+
+  function vibrateDevice(pattern){
+    if (!state.settings.vibrationEnabled) return;
+    if (navigator.vibrate) navigator.vibrate(pattern);
+  }
+
+  function loop(now){
+    const rawDt = now - lastTick; lastTick = now;
+
+    const curTutStep = state.tutorial.active ? tutorialSteps[state.tutorial.step] : null;
+    const watchingSuperPulse = curTutStep && curTutStep.id === 'forceSuperDischarge' && state.tutorial.superDischarged;
+    const tutPause = curTutStep && !watchingSuperPulse && (curTutStep.type === 'modal' || (curTutStep.type === 'wait-action' && curTutStep.highlightId));
+    const overlayEl = document.getElementById('overlay');
+    const overlayPause = overlayEl && overlayEl.style.display === 'flex';
+    const vsEl = document.getElementById('victorySplash');
+    const vsPause = vsEl && vsEl.classList.contains('open');
+    if (currentScreen !== 'battle' || drawerOpen || tutPause || overlayPause || vsPause || state.padIntro){
+      requestAnimationFrame(loop);
+      return;
+    }
+
+    const dt = rawDt * state.gameSpeed;
+    simTime += dt;
+
+    const stats = computedStats();
+    if (!state.firstInit){ state.hp.maxShield = stats.maxShield; state.hp.shield = stats.maxShield; state.firstInit = true; }
+    state.hp.maxShield = stats.maxShield;
+
+    shieldTickAccum += dt;
+    if (shieldTickAccum > 200){ shieldTickAccum=0; state.hp.shield = Math.min(stats.maxShield, state.hp.shield + stats.shieldRegen); }
+
+    const cx=VIEW_W/2, cy=VIEW_H/2;
+    state.droneAngle = (state.droneAngle||0) + dt*0.0012;
+    const dronePos = computeDronePositions(cx, cy, state.droneAngle);
+
+    droneTickAccum += dt;
+    if (droneTickAccum > 1000){
+      droneTickAccum = 0;
+      const droneRange = stats.range + 28; // turret range + 2 range-upgrade levels' worth
+      if (state.droneAttack && state.enemies.length){
+        const enemy = randomEnemyInRange(cx, cy, droneRange);
+        if (enemy){
+          damageEnemy(enemy, stats.dmg*0.6);
+          state.tutorialDroneAttacks = (state.tutorialDroneAttacks||0) + 1;
+          state.droneEffects.push({ x1:dronePos.attack.x, y1:dronePos.attack.y, x2:enemy.x, y2:enemy.y, expires: simTime+180, color:'#ff5c73' });
+        }
+      }
+    }
+    debuffDroneTickAccum += dt;
+    if (debuffDroneTickAccum > 1250){ // fires at 80% the rate of the attack drone
+      debuffDroneTickAccum = 0;
+      const droneRange = stats.range + 28;
+      if (state.droneDebuff && state.enemies.length){
+        const enemy = randomEnemyInRange(cx, cy, droneRange);
+        if (enemy){
+          enemy.slowUntil = simTime + 2400; // doubled duration
+          state.droneEffects.push({ x1:dronePos.debuff.x, y1:dronePos.debuff.y, x2:enemy.x, y2:enemy.y, expires: simTime+180, color:'#c084fc' });
+        }
+      }
+    }
+    state.droneEffects = state.droneEffects.filter(fx => fx.expires > simTime);
+
+    let targetAngle = null;
+
+    // separation: push overlapping enemies apart before applying movement
+    for (let i=0;i<state.enemies.length;i++){
+      const a = state.enemies[i];
+      let pushX = 0, pushY = 0;
+      for (let j=0;j<state.enemies.length;j++){
+        if (i===j) continue;
+        const b = state.enemies[j];
+        const dx = a.x-b.x, dy = a.y-b.y;
+        const dist = Math.hypot(dx,dy) || 0.01;
+        const minDist = a.radius + b.radius + 22;
+        if (dist < minDist){
+          const overlap = (minDist - dist) / minDist;
+          pushX += (dx/dist) * overlap;
+          pushY += (dy/dist) * overlap;
+        }
+      }
+      a.pushX = pushX; a.pushY = pushY;
+    }
+
+    const engageRadius = Math.round(SHIELD_TOUCH_RADIUS);
+    for (const e of state.enemies){
+      const isStunned = e.stunnedUntil && e.stunnedUntil > simTime;
+      if (isStunned){
+        e.legPhase += dt*0.002*e.wobble;
+        continue;
+      }
+      const dx=cx-e.x, dy=cy-e.y, d=Math.hypot(dx,dy)||1;
+      const isSlowed = e.slowUntil && e.slowUntil > simTime;
+      let spd = e.speed * (isSlowed?0.5:1) * (dt/16.67);
+      const holdAt = e.holdRadius || engageRadius;
+      if (d > holdAt){
+        e.x += (dx/d)*spd + (e.pushX||0)*spd*3.5;
+        e.y += (dy/d)*spd + (e.pushY||0)*spd*3.5;
+      } else {
+        e.x += (e.pushX||0)*spd*3.5;
+        e.y += (e.pushY||0)*spd*3.5;
+      }
+      e.legPhase += dt*0.008*e.wobble;
+      if (d < holdAt+6){
+        let hit = e.dmg*(dt/1000);
+        // Tutorial safety net: the ship can't be destroyed mid-tutorial, so new
+        // players always reach the super-weapon reveal without dying or watching ads.
+        if (state.tutorial.active) hit = Math.min(hit, Math.max(0, state.hp.shield - stats.maxShield*0.25));
+        state.hp.shield -= hit; if (state.hp.shield<0) state.hp.shield=0;
+        if (now - lastDamageVibrateTime > 400){ lastDamageVibrateTime = now; vibrateDevice(60); }
+      }
+    }
+
+    const {enemy:nearest, dist:nearestDist} = nearestEnemy();
+    if (nearest && nearestDist <= stats.range){
+      targetAngle = Math.atan2(nearest.y-cy, nearest.x-cx);
+      if (simTime - state.lastFire > stats.fireInterval){ fireAt(nearest, stats); state.lastFire = simTime; }
+    }
+
+    // Launchpad corner turrets (Earth only) — inherit main turret damage/range,
+    // fire a bit slower, pick their own nearest target in range.
+    if (isEarth() && launchpadTurretCount() > 0){
+      const dmgMult = launchpadTurretDmgMult();
+      for (let ti=0; ti<launchpadTurretCount(); ti++){
+        const tp = launchpadTurretPos(ti);
+        if (simTime - (state.cornerLastFire[ti]||0) > stats.fireInterval * 1.6){
+          const tgt = randomEnemyInRange(tp.x, tp.y, stats.range);
+          if (tgt){
+            state.projectiles.push({ x:tp.x, y:tp.y, targetId:tgt.id, speed:8,
+              dmg: stats.dmg * 0.4 * dmgMult, crit: Math.random() < stats.critChance });
+            state.cornerLastFire[ti] = simTime;
+          }
+        }
+      }
+    }
+
+    // Fighter squadron (Lv9+): telegraphed strafing run down a line through the
+    // pad, damaging every enemy in the corridor. Armed per-wave by spawnWave
+    // (first run ~6s in), then on interval; scrubbed when a wave clears.
+    if (isEarth() && state.padJets >= 1 && state.waveActive && state.enemies.length > 0){
+      if (!state.nextJetAt) state.nextJetAt = simTime + 15000;
+      if (simTime >= state.nextJetAt){
+        state.jetRuns.push({ angle: Math.random()*Math.PI, phase:'warn', phaseStart: simTime, jetCount: launchpadJetCount() });
+        state.nextJetAt = simTime + launchpadJetInterval();
+      }
+    }
+    processJetRuns(stats);
+    state.turretAngle = targetAngle !== null ? targetAngle : (state.turretAngle ?? -Math.PI/2);
+
+    for (const p of [...state.projectiles]){
+      const target = state.enemies.find(e=>e.id===p.targetId);
+      if (!target){ state.projectiles = state.projectiles.filter(x=>x!==p); continue; }
+      const dx=target.x-p.x, dy=target.y-p.y, d=Math.hypot(dx,dy)||1;
+      p.x += (dx/d)*p.speed*(dt/16.67); p.y += (dy/d)*p.speed*(dt/16.67);
+      if (d < 14){ damageEnemy(target, p.crit?p.dmg*2:p.dmg); state.projectiles = state.projectiles.filter(x=>x!==p); }
+    }
+
+    if (state.hp.shield <= 0 && state.waveActive && !state.gameOverShown) handleShipDown();
+
+    render(stats);
+    updateBattleHUD();
+    if (now - lastFullUITime > 250){ lastFullUITime = now; updateUI(); }
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- Companion drones ----------
+  function computeDronePositions(cx, cy, angle){
+    const orbitR = 62;
+    return {
+      attack: { x: cx + Math.cos(angle)*orbitR, y: cy + Math.sin(angle)*orbitR },
+      debuff: { x: cx + Math.cos(angle+Math.PI)*orbitR, y: cy + Math.sin(angle+Math.PI)*orbitR },
+    };
+  }
+
+  function drawDrone(c, x, y, kind, t, facingAngle){
+    c.save();
+    c.translate(x, y);
+    const bob = Math.sin(t*0.0025 + (kind==='attack'?0:Math.PI))*1.6;
+    c.translate(0, bob);
+    c.rotate(facingAngle);
+
+    if (kind === 'attack'){
+      const glow = c.createRadialGradient(0,0,1,0,0,10);
+      glow.addColorStop(0,'rgba(255,92,115,0.35)'); glow.addColorStop(1,'rgba(255,92,115,0)');
+      c.beginPath(); c.arc(0,0,10,0,Math.PI*2); c.fillStyle = glow; c.fill();
+
+      c.beginPath();
+      c.moveTo(0,-7); c.lineTo(6,4); c.lineTo(0,1.5); c.lineTo(-6,4);
+      c.closePath();
+      c.fillStyle = '#2a1420'; c.strokeStyle = '#ff5c73'; c.lineWidth = 1.4;
+      c.fill(); c.stroke();
+      c.beginPath(); c.arc(0,-1,2,0,Math.PI*2); c.fillStyle = '#ff5c73'; c.fill();
+    } else {
+      const glow = c.createRadialGradient(0,0,1,0,0,11);
+      glow.addColorStop(0,'rgba(192,132,252,0.35)'); glow.addColorStop(1,'rgba(192,132,252,0)');
+      c.beginPath(); c.arc(0,0,11,0,Math.PI*2); c.fillStyle = glow; c.fill();
+
+      const pulse = 14 + Math.sin(t*0.003)*3;
+      c.beginPath(); c.arc(0,0,pulse,0,Math.PI*2);
+      c.strokeStyle = 'rgba(192,132,252,0.3)'; c.lineWidth = 1; c.stroke();
+
+      c.beginPath(); c.moveTo(0,-6); c.lineTo(5.2,0); c.lineTo(0,6); c.lineTo(-5.2,0); c.closePath();
+      c.fillStyle = '#1c1430'; c.strokeStyle = '#c084fc'; c.lineWidth = 1.4;
+      c.fill(); c.stroke();
+      c.beginPath(); c.arc(0,0,2,0,Math.PI*2); c.fillStyle = '#c084fc'; c.fill();
+    }
+    c.restore();
+  }
+
+  // ---------- Rendering: ship ----------
+  function drawShip(c, cx, cy, scale, turretAngle, t, flying){
+    c.save();
+    c.translate(cx, cy);
+
+    if (flying){
+      // engine flame
+      const flameLen = 10 + Math.sin(t*0.01)*3;
+      c.beginPath();
+      c.moveTo(-8*scale, 16*scale);
+      c.lineTo(0, (16+flameLen)*scale);
+      c.lineTo(8*scale, 16*scale);
+      c.closePath();
+      const flameGrad = c.createLinearGradient(0,16*scale,0,(16+flameLen)*scale);
+      flameGrad.addColorStop(0,'rgba(79,214,192,0.9)');
+      flameGrad.addColorStop(1,'rgba(79,214,192,0)');
+      c.fillStyle = flameGrad; c.fill();
+
+      // ion trail cosmetic — extra particles streaming behind the engine
+      if (state.cosmetics && state.cosmetics.ionTrail){
+        for (let i=0;i<5;i++){
+          const phase = (t*0.006 + i*0.9) % 1;
+          const py = (16 + phase*22) * scale;
+          const px = Math.sin(t*0.004 + i*2)*4*scale*phase;
+          c.beginPath();
+          c.arc(px, py, (2.2 - phase*1.6)*scale*0.5, 0, Math.PI*2);
+          c.fillStyle = `rgba(192,132,252,${(1-phase)*0.65})`;
+          c.fill();
+        }
+      }
+    }
+
+    // wings
+    c.fillStyle = '#1c2740';
+    c.strokeStyle = '#3a4568'; c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(-4*scale,-2*scale); c.lineTo(-26*scale,14*scale); c.lineTo(-18*scale,18*scale); c.lineTo(-4*scale,8*scale);
+    c.closePath(); c.fill(); c.stroke();
+    c.beginPath();
+    c.moveTo(4*scale,-2*scale); c.lineTo(26*scale,14*scale); c.lineTo(18*scale,18*scale); c.lineTo(4*scale,8*scale);
+    c.closePath(); c.fill(); c.stroke();
+
+    // wing lights
+    c.fillStyle = '#ffd166';
+    c.beginPath(); c.arc(-20*scale,15*scale,1.6*scale,0,7); c.fill();
+    c.beginPath(); c.arc(20*scale,15*scale,1.6*scale,0,7); c.fill();
+
+    // hull
+    const crimson = state.cosmetics && state.cosmetics.crimsonHull;
+    const hullGrad = c.createLinearGradient(0,-22*scale,0,18*scale);
+    if (crimson){
+      hullGrad.addColorStop(0,'#6e2038'); hullGrad.addColorStop(1,'#2e0d18');
+    } else {
+      hullGrad.addColorStop(0,'#2c3a5c'); hullGrad.addColorStop(1,'#151d33');
+    }
+    c.beginPath();
+    c.moveTo(0,-22*scale);
+    c.quadraticCurveTo(13*scale,-4*scale, 10*scale,16*scale);
+    c.lineTo(-10*scale,16*scale);
+    c.quadraticCurveTo(-13*scale,-4*scale, 0,-22*scale);
+    c.closePath();
+    c.fillStyle = hullGrad; c.fill();
+    c.strokeStyle = crimson ? '#ff5c73' : '#4fd6c0'; c.lineWidth = 1.4; c.stroke();
+
+    // cockpit
+    const cockGrad = c.createRadialGradient(0,-9*scale,1,0,-9*scale,7*scale);
+    cockGrad.addColorStop(0,'#bff3ea'); cockGrad.addColorStop(1,'#2a8f80');
+    c.beginPath(); c.ellipse(0,-9*scale,5*scale,7*scale,0,0,Math.PI*2);
+    c.fillStyle = cockGrad; c.fill();
+    c.strokeStyle = '#04231e'; c.lineWidth=1; c.stroke();
+
+    // hull racing stripe
+    c.strokeStyle = crimson ? 'rgba(255,92,115,0.6)' : 'rgba(79,214,192,0.5)'; c.lineWidth = 2*scale;
+    c.beginPath(); c.moveTo(0,-16*scale); c.lineTo(0,14*scale); c.stroke();
+
+    c.restore();
+
+    // shield ring
+    const shieldPct = state.hp.maxShield ? state.hp.shield/state.hp.maxShield : 0;
+    c.beginPath();
+    c.arc(cx,cy,30*scale/1.15,-Math.PI/2,-Math.PI/2+Math.PI*2*shieldPct);
+    c.strokeStyle = shieldPct>0.3 ? '#4fd6c0' : '#ff5c73';
+    c.lineWidth = 3; c.stroke();
+
+    // turret barrel on top, rotating toward target
+    c.save();
+    c.translate(cx,cy); c.rotate(turretAngle - Math.PI/2);
+    c.fillStyle = '#0d0f1a'; c.strokeStyle='#4fd6c0'; c.lineWidth=1.2;
+    c.beginPath(); c.arc(0,0,7*scale,0,Math.PI*2); c.fill(); c.stroke();
+    c.fillStyle = '#232a42';
+    c.fillRect(-2.6*scale, -0, 5.2*scale, 15*scale);
+    c.strokeRect(-2.6*scale, 0, 5.2*scale, 15*scale);
+    c.restore();
+  }
+
+  // ---------- Rendering: enemies ----------
+  function drawEnemy(c, e, t){
+    c.save();
+    c.translate(e.x, e.y);
+    const r = e.radius;
+    const originIdx = e.originPlanet !== undefined ? e.originPlanet : state.currentPlanetIndex;
+    const pt = planets[originIdx];
+    const dark = e.kind==='boss' ? '#7c3aed' : e.kind==='miniboss' ? '#f59e0b' : pt.enemyDark;
+    const bright = e.kind==='boss' ? '#c084fc' : e.kind==='miniboss' ? '#ffd166' : pt.enemyColor;
+
+    if (originIdx === 1){
+      drawEnemyBodyCrystal(c, e, t, r, dark, bright);
+    } else if (originIdx === 2){
+      drawEnemyBodyFrost(c, e, t, r, dark, bright);
+    } else if (originIdx === 3){
+      drawEnemyBodyScorpion(c, e, t, r, dark, bright);
+    } else {
+      drawEnemyBodyOrganic(c, e, t, r, dark, bright);
+    }
+
+    c.restore();
+
+    if (e.slowUntil && e.slowUntil > simTime){
+      const t2 = performance.now();
+      const ringR = r*1.35 + Math.sin(t2*0.006 + e.legPhase)*1.5;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, ringR, 0, Math.PI*2);
+      ctx.strokeStyle = 'rgba(192,132,252,0.7)';
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([3,4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    if (e.stunnedUntil && e.stunnedUntil > simTime){
+      const t2 = performance.now();
+      const starCount = 3;
+      for (let i=0;i<starCount;i++){
+        const a = t2*0.004 + (i/starCount)*Math.PI*2;
+        const sx = e.x + Math.cos(a)*r*0.9;
+        const sy = e.y - r*1.3 + Math.sin(a)*r*0.35;
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.rotate(a);
+        ctx.fillStyle = '#ffd166';
+        ctx.beginPath();
+        for (let k=0;k<5;k++){
+          const sa = (k/5)*Math.PI*2 - Math.PI/2;
+          const rad = k%2===0 ? r*0.16 : r*0.07;
+          const px = Math.cos(sa)*rad, py = Math.sin(sa)*rad;
+          k===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+        }
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // hp bar
+    const w = r*2.2;
+    ctx.fillStyle='#000a'; ctx.fillRect(e.x-w/2, e.y-r-12, w, 4);
+    ctx.fillStyle= e.hp/e.maxHp>0.3 ? '#ff5c73' : '#ffd166';
+    ctx.fillRect(e.x-w/2, e.y-r-12, w*(e.hp/e.maxHp), 4);
+  }
+
+  // Planet I — organic spiky-legged jungle creature
+  function drawEnemyBodyOrganic(c, e, t, r, dark, bright){
+    const seed = e.wobble * 41.7;
+
+    // jointed legs — hip to knee to foot, bent for an insectoid look
+    c.strokeStyle = dark; c.lineWidth = Math.max(1.5, r*0.13);
+    const legCount = e.kind==='boss' ? 8 : e.kind==='miniboss' ? 7 : 5;
+    for (let i=0;i<legCount;i++){
+      const a = (i/legCount)*Math.PI*2 + Math.sin(e.legPhase)*0.25;
+      const hipX = Math.cos(a)*r*0.72, hipY = Math.sin(a)*r*0.72;
+      const kneeA = a + Math.sin(e.legPhase*1.3+i)*0.18;
+      const kneeX = Math.cos(kneeA)*r*1.15, kneeY = Math.sin(kneeA)*r*1.15 - r*0.15;
+      const footX = Math.cos(a)*r*1.55, footY = Math.sin(a)*r*1.55;
+      c.beginPath();
+      c.moveTo(hipX, hipY);
+      c.lineTo(kneeX, kneeY);
+      c.lineTo(footX, footY);
+      c.stroke();
+      // foot claw
+      c.beginPath();
+      c.moveTo(footX, footY);
+      c.lineTo(footX + Math.cos(a+0.5)*r*0.16, footY + Math.sin(a+0.5)*r*0.16);
+      c.stroke();
+    }
+
+    // spikes
+    c.fillStyle = dark;
+    const spikeCount = 6;
+    for (let i=0;i<spikeCount;i++){
+      const a = (i/spikeCount)*Math.PI*2;
+      const tx=Math.cos(a)*r*1.35, ty=Math.sin(a)*r*1.35;
+      const pa=a+0.28, pb=a-0.28;
+      c.beginPath();
+      c.moveTo(Math.cos(pa)*r*0.8, Math.sin(pa)*r*0.8);
+      c.lineTo(tx,ty);
+      c.lineTo(Math.cos(pb)*r*0.8, Math.sin(pb)*r*0.8);
+      c.closePath(); c.fill();
+    }
+
+    // body
+    const grad = c.createRadialGradient(-r*0.3,-r*0.3,r*0.1,0,0,r);
+    grad.addColorStop(0,bright); grad.addColorStop(1,dark);
+    c.beginPath(); c.arc(0,0,r,0,Math.PI*2); c.fillStyle=grad; c.fill();
+    c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth=1.5; c.stroke();
+
+    // mottled skin texture — a few deterministic darker blotches
+    c.fillStyle = 'rgba(0,0,0,0.16)';
+    for (let i=0;i<3;i++){
+      const a = seed + i*2.4;
+      const bx = Math.cos(a)*r*0.45, by = Math.sin(a)*r*0.45;
+      c.beginPath(); c.arc(bx, by, r*0.16, 0, Math.PI*2); c.fill();
+    }
+
+    // head — a distinct smaller lobe up front, with its own shading
+    const headY = -r*0.78, headR = r*0.52;
+    const headGrad = c.createRadialGradient(-headR*0.25,headY-headR*0.25,1,0,headY,headR);
+    headGrad.addColorStop(0,bright); headGrad.addColorStop(1,dark);
+    c.beginPath(); c.arc(0, headY, headR, 0, Math.PI*2); c.fillStyle = headGrad; c.fill();
+    c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth=1.2; c.stroke();
+
+    // mandibles either side of the head
+    c.strokeStyle = dark; c.lineWidth = Math.max(1.4, r*0.1); c.lineCap = 'round';
+    for (const side of [-1,1]){
+      c.beginPath();
+      c.moveTo(side*headR*0.6, headY+headR*0.35);
+      c.quadraticCurveTo(side*headR*1.3, headY+headR*0.55, side*headR*1.15, headY-headR*0.15);
+      c.stroke();
+    }
+
+    // eyes, on the head
+    const eyeOffset = headR*0.42;
+    for (const side of [-1,1]){
+      const ex = side*eyeOffset;
+      const ey = headY - headR*0.1;
+      c.beginPath(); c.arc(ex,ey,r*0.2,0,Math.PI*2); c.fillStyle='#0b0f14'; c.fill();
+      c.beginPath(); c.arc(ex,ey,r*0.22,0,Math.PI*2); c.strokeStyle='#fff2'; c.lineWidth=1; c.stroke();
+      c.beginPath(); c.arc(ex+r*0.05,ey-r*0.05,r*0.07,0,Math.PI*2); c.fillStyle='#ff5c73'; c.fill();
+    }
+  }
+
+  // Planet II — angular obsidian golem with glowing magma cracks
+  function drawEnemyBodyCrystal(c, e, t, r, dark, bright){
+    const glow = e.kind==='boss' ? '#ffb347' : e.kind==='miniboss' ? '#ffdd66' : '#ff7a3d';
+
+    // stubby armored legs (fewer, thicker, mechanical)
+    const legCount = e.kind==='boss' ? 6 : e.kind==='miniboss' ? 5 : 4;
+    c.strokeStyle = '#9a7358'; c.lineWidth = Math.max(2.4, r*0.24);
+    for (let i=0;i<legCount;i++){
+      const a = (i/legCount)*Math.PI*2 + Math.PI/legCount + Math.sin(e.legPhase*0.6)*0.12;
+      const kneeX = Math.cos(a)*r*0.95, kneeY = Math.sin(a)*r*0.95 + r*0.3;
+      const footX = Math.cos(a)*r*1.15, footY = Math.sin(a)*r*0.6 + r*0.85;
+      c.beginPath();
+      c.moveTo(Math.cos(a)*r*0.6, Math.sin(a)*r*0.5);
+      c.lineTo(kneeX, kneeY);
+      c.lineTo(footX, footY);
+      c.stroke();
+      // clawed foot
+      c.beginPath();
+      c.moveTo(footX, footY);
+      c.lineTo(footX+r*0.14, footY+r*0.1);
+      c.moveTo(footX, footY);
+      c.lineTo(footX-r*0.05, footY+r*0.16);
+      c.stroke();
+    }
+
+    // angular rock-plate body — irregular jagged polygon, deterministic per enemy via legPhase seed
+    const sides = 7;
+    const seed = e.wobble * 37.1;
+    const pts = [];
+    for (let i=0;i<sides;i++){
+      const a = (i/sides)*Math.PI*2;
+      const jag = 0.78 + 0.22*Math.sin(seed + i*2.7);
+      pts.push([Math.cos(a)*r*jag, Math.sin(a)*r*jag*0.92]);
+    }
+    const bodyGrad = c.createLinearGradient(0,-r,0,r);
+    bodyGrad.addColorStop(0, bright); bodyGrad.addColorStop(1, dark);
+    c.beginPath();
+    c.moveTo(pts[0][0], pts[0][1]);
+    for (let i=1;i<pts.length;i++) c.lineTo(pts[i][0], pts[i][1]);
+    c.closePath();
+    c.fillStyle = bodyGrad; c.fill();
+    c.strokeStyle = '#0a0503'; c.lineWidth = 1.6; c.stroke();
+
+    // glowing magma cracks across the plates
+    c.strokeStyle = glow; c.lineWidth = Math.max(1, r*0.09);
+    c.globalAlpha = 0.75 + 0.25*Math.sin(t*0.006 + seed);
+    for (let i=0;i<3;i++){
+      const p1 = pts[i*2 % pts.length], p2 = [0,0], p3 = pts[(i*2+3) % pts.length];
+      c.beginPath();
+      c.moveTo(p1[0]*0.9, p1[1]*0.9);
+      c.lineTo(p2[0], p2[1]);
+      c.lineTo(p3[0]*0.85, p3[1]*0.85);
+      c.stroke();
+    }
+    c.globalAlpha = 1;
+
+    // shoulder crystal spikes jutting outward
+    c.fillStyle = glow;
+    const spikeCount = e.kind==='boss' ? 5 : e.kind==='miniboss' ? 4 : 3;
+    for (let i=0;i<spikeCount;i++){
+      const a = -Math.PI/2 + (i - (spikeCount-1)/2) * 0.55;
+      const bx = Math.cos(a)*r*0.5, by = Math.sin(a)*r*0.5 - r*0.15;
+      const tx = Math.cos(a)*r*1.25, ty = Math.sin(a)*r*1.05 - r*0.15;
+      c.beginPath();
+      c.moveTo(bx-r*0.12, by); c.lineTo(tx,ty); c.lineTo(bx+r*0.12, by);
+      c.closePath(); c.fill();
+    }
+
+    // single glowing eye slit
+    c.fillStyle = glow;
+    c.save();
+    c.rotate(Math.sin(t*0.002+seed)*0.05);
+    c.beginPath();
+    c.ellipse(0, -r*0.1, r*0.42, r*0.11, 0, 0, Math.PI*2);
+    c.fill();
+    c.restore();
+
+    // jagged glowing maw with teeth
+    const mawY = r*0.28;
+    const mawW = r*0.5;
+    c.fillStyle = '#0a0503';
+    c.beginPath();
+    c.ellipse(0, mawY, mawW, r*0.14, 0, 0, Math.PI*2);
+    c.fill();
+    c.fillStyle = glow;
+    c.globalAlpha = 0.85;
+    const teeth = 5;
+    for (let i=0;i<teeth;i++){
+      const tx = -mawW*0.8 + (i/(teeth-1))*mawW*1.6;
+      c.beginPath();
+      c.moveTo(tx-r*0.05, mawY-r*0.08);
+      c.lineTo(tx+r*0.05, mawY-r*0.08);
+      c.lineTo(tx, mawY+r*0.06);
+      c.closePath(); c.fill();
+    }
+    c.globalAlpha = 1;
+  }
+
+  // Planet III — floating ice construct, no legs, hovers on a frost trail
+  function drawEnemyBodyFrost(c, e, t, r, dark, bright){
+    const seed = e.wobble * 29.3;
+    const bob = Math.sin(t*0.003 + seed) * r*0.12;
+
+    // frost trail / hover shadow beneath
+    const trailY = r*0.95;
+    c.beginPath();
+    c.ellipse(0, trailY, r*0.55, r*0.16, 0, 0, Math.PI*2);
+    c.fillStyle = 'rgba(180,230,255,0.18)'; c.fill();
+    for (let i=0;i<4;i++){
+      const a = (i/4)*Math.PI*2 + t*0.001;
+      const sx = Math.cos(a)*r*0.4, sy = trailY + Math.sin(a)*r*0.1;
+      c.beginPath(); c.arc(sx, sy, r*0.06, 0, Math.PI*2);
+      c.fillStyle = 'rgba(210,240,255,0.5)'; c.fill();
+    }
+
+    c.save();
+    c.translate(0, bob);
+
+    // angular crystalline body — sharp icy polygon
+    const sides = 6;
+    const pts = [];
+    for (let i=0;i<sides;i++){
+      const a = (i/sides)*Math.PI*2;
+      const jag = 0.8 + 0.2*Math.sin(seed + i*2.4);
+      pts.push([Math.cos(a)*r*jag*0.9, Math.sin(a)*r*jag]);
+    }
+    const bodyGrad = c.createLinearGradient(0,-r,0,r);
+    bodyGrad.addColorStop(0, bright); bodyGrad.addColorStop(1, dark);
+    c.beginPath();
+    c.moveTo(pts[0][0], pts[0][1]);
+    for (let i=1;i<pts.length;i++) c.lineTo(pts[i][0], pts[i][1]);
+    c.closePath();
+    c.fillStyle = bodyGrad; c.fill();
+    c.strokeStyle = 'rgba(255,255,255,0.6)'; c.lineWidth = 1.4; c.stroke();
+
+    // icy shard spikes radiating outward
+    const glow = e.kind==='boss' ? '#e8faff' : e.kind==='miniboss' ? '#c8f0ff' : '#a8e0f5';
+    c.fillStyle = 'rgba(255,255,255,0.85)';
+    const spikeCount = e.kind==='boss' ? 6 : e.kind==='miniboss' ? 5 : 4;
+    for (let i=0;i<spikeCount;i++){
+      const a = (i/spikeCount)*Math.PI*2 + seed*0.3;
+      const bx = Math.cos(a)*r*0.75, by = Math.sin(a)*r*0.75;
+      const tx = Math.cos(a)*r*1.3, ty = Math.sin(a)*r*1.3;
+      const pa = a+0.16, pb = a-0.16;
+      c.beginPath();
+      c.moveTo(Math.cos(pa)*r*0.7, Math.sin(pa)*r*0.7);
+      c.lineTo(tx, ty);
+      c.lineTo(Math.cos(pb)*r*0.7, Math.sin(pb)*r*0.7);
+      c.closePath(); c.fill();
+    }
+
+    // orbiting ice fragments
+    for (let i=0;i<3;i++){
+      const a = t*0.0015 + (i/3)*Math.PI*2;
+      const ox = Math.cos(a)*r*1.5, oy = Math.sin(a)*r*1.5*0.5;
+      c.beginPath(); c.arc(ox, oy, r*0.09, 0, Math.PI*2);
+      c.fillStyle = 'rgba(220,245,255,0.8)'; c.fill();
+    }
+
+    // glowing cold-blue core
+    const pulse = 0.6 + 0.4*Math.sin(t*0.004 + seed);
+    const coreGrad = c.createRadialGradient(0,0,1,0,0,r*0.4);
+    coreGrad.addColorStop(0, glow); coreGrad.addColorStop(1, 'rgba(150,220,255,0)');
+    c.beginPath(); c.arc(0,0,r*0.4*pulse+r*0.15,0,Math.PI*2);
+    c.fillStyle = coreGrad; c.fill();
+    c.beginPath(); c.arc(0,0,r*0.18,0,Math.PI*2);
+    c.fillStyle = glow; c.fill();
+
+    c.restore();
+  }
+
+  // Planet IV — segmented desert scorpion with a curved tail/stinger
+  function drawEnemyBodyScorpion(c, e, t, r, dark, bright){
+    const seed = e.wobble * 33.7;
+    const glow = e.kind==='boss' ? '#ffdd88' : e.kind==='miniboss' ? '#ffe8a8' : '#ffcf6b';
+
+    // thin scuttling legs
+    c.strokeStyle = dark; c.lineWidth = Math.max(1.2, r*0.09);
+    const legCount = e.kind==='boss' ? 8 : e.kind==='miniboss' ? 7 : 6;
+    for (let i=0;i<legCount;i++){
+      const side = i%2===0 ? -1 : 1;
+      const row = Math.floor(i/2);
+      const baseA = side * (Math.PI*0.28) + row*side*0.42 - Math.PI/2*side*0.15;
+      const scuttle = Math.sin(e.legPhase*1.6 + i)*0.2;
+      const hipX = side*r*0.55, hipY = -r*0.15 + row*r*0.32;
+      const footX = side*r*1.15 + Math.cos(baseA+scuttle)*r*0.2;
+      const footY = hipY + r*0.35 + Math.sin(baseA+scuttle)*r*0.1;
+      c.beginPath();
+      c.moveTo(hipX, hipY);
+      c.lineTo(side*r*0.9, hipY+r*0.15);
+      c.lineTo(footX, footY);
+      c.stroke();
+    }
+
+    // curved tail arcing over the back, segmented
+    const tailBend = Math.sin(t*0.002+seed)*0.1;
+    c.strokeStyle = dark; c.lineWidth = Math.max(2, r*0.16); c.lineCap='round';
+    c.beginPath();
+    c.moveTo(-r*0.1, -r*0.5);
+    c.quadraticCurveTo(-r*0.6, -r*1.4+tailBend*r, r*0.05, -r*1.55+tailBend*r);
+    c.stroke();
+    // stinger tip
+    c.fillStyle = glow;
+    c.beginPath();
+    c.arc(r*0.05, -r*1.55+tailBend*r, r*0.13, 0, Math.PI*2);
+    c.fill();
+
+    // segmented body — two overlapping plates (thorax + abdomen)
+    const seg1Grad = c.createRadialGradient(-r*0.2,-r*0.2,1,0,0,r*0.75);
+    seg1Grad.addColorStop(0,bright); seg1Grad.addColorStop(1,dark);
+    c.beginPath(); c.ellipse(-r*0.15, r*0.05, r*0.62, r*0.5, -0.15, 0, Math.PI*2);
+    c.fillStyle = seg1Grad; c.fill();
+    c.strokeStyle = 'rgba(0,0,0,0.3)'; c.lineWidth=1.2; c.stroke();
+
+    const seg2Grad = c.createRadialGradient(-r*0.1,-r*0.3,1,r*0.35,-r*0.1,r*0.6);
+    seg2Grad.addColorStop(0,bright); seg2Grad.addColorStop(1,dark);
+    c.beginPath(); c.ellipse(r*0.35, -r*0.1, r*0.48, r*0.4, 0.1, 0, Math.PI*2);
+    c.fillStyle = seg2Grad; c.fill();
+    c.strokeStyle = 'rgba(0,0,0,0.3)'; c.lineWidth=1.2; c.stroke();
+
+    // pincers/claws at the front
+    c.strokeStyle = dark; c.lineWidth = Math.max(1.6, r*0.12); c.lineCap='round';
+    for (const side of [-1,1]){
+      c.beginPath();
+      c.moveTo(r*0.7, side*r*0.25);
+      c.quadraticCurveTo(r*1.15, side*r*0.45, r*1.05, side*r*0.15);
+      c.stroke();
+    }
+
+    // eyes
+    for (const side of [-1,1]){
+      const ex = r*0.5+side*r*0.12, ey = -r*0.15;
+      c.beginPath(); c.arc(ex,ey,r*0.09,0,Math.PI*2); c.fillStyle='#1a0f04'; c.fill();
+      c.beginPath(); c.arc(ex+r*0.02,ey-r*0.02,r*0.03,0,Math.PI*2); c.fillStyle='#ff5c73'; c.fill();
+    }
+  }
+
+  function computeScreenShake(){
+    // only shake for bosses that are actually walking — a stunned or
+    // already-arrived boss isn't putting its feet down, so no tremor
+    const bossMoving = state.enemies.some(e => {
+      if (e.kind !== 'boss' && e.kind !== 'miniboss') return false;
+      if (e.stunnedUntil && e.stunnedUntil > simTime) return false;
+      const cx = VIEW_W/2, cy = VIEW_H/2;
+      const d = Math.hypot(e.x-cx, e.y-cy);
+      return d > (e.holdRadius || 46);
+    });
+    if (!bossMoving) return {x:0, y:0};
+    const period = 850;
+    const cycleIndex = Math.floor(simTime/period);
+    const cyclePos = (simTime % period) / period;
+    const impulse = Math.pow(Math.max(0, 1 - cyclePos*5), 2); // sharp jolt, quick decay
+    const seed = Math.sin(cycleIndex*12.9898) * 43758.5453;
+    const angle = (seed - Math.floor(seed)) * Math.PI * 2;
+    const amp = 6.4 * impulse;
+    return { x: Math.cos(angle)*amp, y: Math.sin(angle)*amp };
+  }
+
+  // The battle camera zooms out as turret range grows, so the visible world
+  // region is larger than the screen. Jets must fly across the FULL visible
+  // span — otherwise they pop in/out mid-screen when zoomed out.
+  function jetFlightSpan(stats){
+    const zoom = Math.min(1, (Math.min(VIEW_W, VIEW_H) * 0.42) / stats.range);
+    return Math.hypot(VIEW_W, VIEW_H) / (2 * zoom);
+  }
+
+  function processJetRuns(stats){
+    const cx=VIEW_W/2, cy=VIEW_H/2;
+    const R = jetFlightSpan(stats);
+    for (const run of [...state.jetRuns]){
+      const age = simTime - run.phaseStart;
+      if (run.phase === 'warn' && age > 1400){
+        run.phase = 'strike'; run.phaseStart = simTime;
+        run.lastShot = []; run.lasers = [];
+      } else if (run.phase === 'strike'){
+        // Slow, readable strafing run: each jet fires a visible laser every
+        // 150ms at the nearest enemy in its lane, so players can see exactly
+        // what the squadron is doing to the wave.
+        const dx=Math.cos(run.angle), dy=Math.sin(run.angle);
+        const prog = Math.min(1, age/2600);
+        for (let i=0;i<run.jetCount;i++){
+          const off = (i-(run.jetCount-1)/2)*55;
+          const along = -R + prog*2*R; // full span for every jet — lateral offset separates them
+          const jx = cx + dx*along - dy*off;
+          const jy = cy + dy*along + dx*off;
+          if (simTime - (run.lastShot[i]||0) > 150){
+            let best=null, bestD=Infinity;
+            for (const e of state.enemies){
+              const cross = (e.x-cx)*dy - (e.y-cy)*dx;
+              if (Math.abs(cross - off) > 77 + e.radius) continue; // in this jet's lane (10% wider)
+              const al = (e.x-cx)*dx + (e.y-cy)*dy;
+              if (al > along + 420 || al < along - 160) continue;  // near the jet, mostly ahead of it
+              const d = Math.hypot(e.x-jx, e.y-jy);
+              if (d < bestD){ bestD=d; best=e; }
+            }
+            if (best){
+              run.lastShot[i] = simTime;
+              // per-shot damage as % of max HP — an enemy caught in the lane
+              // takes several hits as the jet passes, staying relevant at every wave
+              const frac = best.kind==='grunt' ? 0.18 : best.kind==='miniboss' ? 0.09 : 0.06;
+              damageEnemy(best, best.maxHp * frac);
+              run.lasers.push({ x1:jx, y1:jy, x2:best.x, y2:best.y, start:simTime });
+              SFX.jet();
+            }
+          }
+        }
+        run.lasers = run.lasers.filter(l => simTime - l.start < 160); // prune faded beams
+        if (age > 2600) state.jetRuns = state.jetRuns.filter(r=>r!==run);
+      }
+    }
+  }
+
+  function drawLaunchpad(c, t){
+    const cx=VIEW_W/2, cy=VIEW_H/2;
+    const S = 82; // half-size of the pad
+    c.save();
+    // concrete slab
+    c.fillStyle = '#343a46';
+    c.strokeStyle = '#59637a'; c.lineWidth = 2;
+    c.beginPath();
+    if (c.roundRect) c.roundRect(cx-S, cy-S, S*2, S*2, 10); else c.rect(cx-S, cy-S, S*2, S*2);
+    c.fill(); c.stroke();
+    // hazard stripes along the edge
+    c.strokeStyle = 'rgba(255,209,102,0.7)'; c.lineWidth = 3;
+    c.setLineDash([9,7]);
+    c.strokeRect(cx-S+5, cy-S+5, (S-5)*2, (S-5)*2);
+    c.setLineDash([]);
+    // center landing marking (H)
+    c.strokeStyle = 'rgba(255,255,255,0.3)'; c.lineWidth = 3;
+    c.beginPath();
+    c.moveTo(cx-12, cy-16); c.lineTo(cx-12, cy+16);
+    c.moveTo(cx+12, cy-16); c.lineTo(cx+12, cy+16);
+    c.moveTo(cx-12, cy);    c.lineTo(cx+12, cy);
+    c.stroke();
+    // corner mounts + turrets
+    const built = launchpadTurretCount();
+    for (let i=0;i<4;i++){
+      const p = launchpadTurretPos(i);
+      if (i >= built){
+        // empty mount (not yet built)
+        c.fillStyle = '#262c3a'; c.strokeStyle = '#454f66'; c.lineWidth = 1.5;
+        c.beginPath(); c.arc(p.x, p.y, 7, 0, Math.PI*2); c.fill(); c.stroke();
+      } else {
+        // turret base
+        c.fillStyle = '#2c3350'; c.strokeStyle = '#59637a'; c.lineWidth = 1.5;
+        c.beginPath(); c.arc(p.x, p.y, 9, 0, Math.PI*2); c.fill(); c.stroke();
+        // barrel toward its current target
+        const {enemy:tgt} = nearestEnemyTo(p.x, p.y);
+        const ang = tgt ? Math.atan2(tgt.y-p.y, tgt.x-p.x) : Math.atan2(cy-p.y, cx-p.x);
+        c.strokeStyle = '#9fb3c8'; c.lineWidth = 3.5;
+        c.beginPath(); c.moveTo(p.x, p.y);
+        c.lineTo(p.x+Math.cos(ang)*14, p.y+Math.sin(ang)*14);
+        c.stroke();
+        // muzzle flash if it just fired
+        if (simTime - (state.cornerLastFire[i]||0) < 60){
+          c.fillStyle = 'rgba(255,209,102,0.85)';
+          c.beginPath(); c.arc(p.x+Math.cos(ang)*17, p.y+Math.sin(ang)*17, 4, 0, Math.PI*2); c.fill();
+        }
+      }
+    }
+    // Shield Generator (pad track 5): a subtle defensive ring around the pad,
+    // gently pulsing — slightly stronger and wider with each level bought.
+    if (state.padShield >= 1){
+      const pulse = Math.min(0.45, 0.16 + 0.08*Math.sin(t*0.003) + 0.02*state.padShield);
+      const rr = 96 + state.padShield*5;
+      c.strokeStyle = 'rgba(79,214,192,' + pulse + ')';
+      c.lineWidth = 2.5;
+      c.beginPath(); c.arc(cx, cy, rr, 0, Math.PI*2); c.stroke();
+      c.strokeStyle = 'rgba(79,214,192,' + (pulse*0.4) + ')';
+      c.lineWidth = 1;
+      c.beginPath(); c.arc(cx, cy, rr+5, 0, Math.PI*2); c.stroke();
+    }
+    c.restore();
+  }
+
+  function drawJetRuns(c, t, stats){
+    for (const run of state.jetRuns){
+      const cx=VIEW_W/2, cy=VIEW_H/2;
+      const dx=Math.cos(run.angle), dy=Math.sin(run.angle);
+      const R = jetFlightSpan(stats);
+      if (run.phase === 'warn'){
+        // blinking dashed warning line — the telegraph
+        const blink = 0.35 + 0.4*Math.abs(Math.sin(t*0.012));
+        c.save();
+        c.strokeStyle = 'rgba(255,90,90,' + blink + ')';
+        c.lineWidth = 2.5; c.setLineDash([10,8]);
+        c.beginPath();
+        c.moveTo(cx-dx*R, cy-dy*R); c.lineTo(cx+dx*R, cy+dy*R);
+        c.stroke(); c.setLineDash([]);
+        c.restore();
+      } else {
+        const age = simTime - run.phaseStart;
+        const prog = Math.min(1, age/2600); // slow strafing run — easy to follow
+        // laser beams: bright red lines from jet to target with an impact dot,
+        // fading over 160ms — the jets' effect on the wave is now plainly visible
+        for (const l of (run.lasers||[])){
+          const a = Math.max(0, 1 - (simTime - l.start)/160);
+          c.strokeStyle = 'rgba(255,80,80,' + (0.85*a) + ')';
+          c.lineWidth = 2.5;
+          c.beginPath(); c.moveTo(l.x1, l.y1); c.lineTo(l.x2, l.y2); c.stroke();
+          c.fillStyle = 'rgba(255,170,130,' + (0.9*a) + ')';
+          c.beginPath(); c.arc(l.x2, l.y2, 3.5, 0, Math.PI*2); c.fill();
+        }
+        for (let i=0;i<run.jetCount;i++){
+          const off = (i-(run.jetCount-1)/2)*55;
+          const along = -R + prog*2*R; // full span for every jet — lateral offset separates them
+          const jx = cx + dx*along - dy*off;
+          const jy = cy + dy*along + dx*off;
+          // jet body
+          c.save();
+          c.translate(jx, jy);
+          c.rotate(run.angle);
+          c.scale(1.4, 1.4); // bigger jet — easier to follow the strafing run
+          c.fillStyle='#cfe3f5'; c.strokeStyle='#7d93ad'; c.lineWidth=1;
+          c.beginPath();
+          c.moveTo(14,0); c.lineTo(-10,-7); c.lineTo(-6,0); c.lineTo(-10,7); c.closePath();
+          c.fill(); c.stroke();
+          // exhaust
+          c.fillStyle='rgba(255,180,80,0.8)';
+          c.beginPath(); c.moveTo(-7,-2); c.lineTo(-16-Math.random()*6,0); c.lineTo(-7,2); c.closePath(); c.fill();
+          // nose cannon glow while firing
+          if (run.lastShot && simTime - (run.lastShot[i]||0) < 90){
+            c.fillStyle = 'rgba(255,90,90,0.9)';
+            c.beginPath(); c.arc(15, 0, 3, 0, Math.PI*2); c.fill();
+          }
+          c.restore();
+          // light smoke trail behind the jet (the lasers carry the action now)
+          for (let k=0;k<2;k++){
+            const ex = cx + dx*(along - 30 - k*70 - Math.random()*20) - dy*off + (Math.random()-0.5)*18;
+            const ey = cy + dy*(along - 30 - k*70 - Math.random()*20) + dx*off + (Math.random()-0.5)*18;
+            c.fillStyle = 'rgba(255,' + (140+Math.random()*60|0) + ',60,' + (0.3*(1-prog)) + ')';
+            c.beginPath(); c.arc(ex, ey, 4 + Math.random()*6, 0, Math.PI*2); c.fill();
+          }
+        }
+      }
+    }
+  }
+
+  function inEarthLake(x, y, margin){
+    const cx=VIEW_W/2, cy=VIEW_H/2;
+    const lakeAngle = 0.7;
+    const lx = cx + Math.cos(lakeAngle)*260, ly = cy + Math.sin(lakeAngle)*180;
+    const dx = x-lx, dy = y-ly;
+    const ca = Math.cos(0.3), sa = Math.sin(0.3);
+    const ux = (dx*ca + dy*sa)/1.5;
+    const uy = (-dx*sa + dy*ca)/0.85;
+    const r = 280 + (margin||0);
+    return ux*ux + uy*uy < r*r;
+  }
+
+  function render(stats){
+    ctx.clearRect(0,0,VIEW_W,VIEW_H);
+    const cx=VIEW_W/2, cy=VIEW_H/2;
+    const t = performance.now();
+
+    const shake = computeScreenShake();
+    ctx.save();
+    ctx.translate(shake.x, shake.y);
+
+    // zoom out as range grows, so the range ring always stays comfortably inside the screen
+    const maxRingScreenRadius = Math.min(VIEW_W, VIEW_H) * 0.42;
+    const zoom = Math.min(1, maxRingScreenRadius / stats.range);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-cx, -cy);
+
+    const pt = activePlanet();
+
+    // planet ground — base terrain color covering the full visible area at any zoom level
+    const groundSpan = Math.max(VIEW_W, VIEW_H) / Math.max(zoom, 0.12) * 1.6;
+    ctx.fillStyle = pt.groundBase;
+    ctx.fillRect(cx-groundSpan/2, cy-groundSpan/2, groundSpan, groundSpan);
+
+    // Earth: a lake extending off to one side, forest all around
+    if (isEarth()){
+      const lakeAngle = 0.7;
+      const lakeCx = cx + Math.cos(lakeAngle)*260, lakeCy = cy + Math.sin(lakeAngle)*180;
+      const lakeGrad = ctx.createRadialGradient(lakeCx,lakeCy,10, lakeCx,lakeCy,320);
+      lakeGrad.addColorStop(0, pt.clearingInner); lakeGrad.addColorStop(0.7, pt.clearingOuter); lakeGrad.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.save();
+      ctx.translate(lakeCx, lakeCy); ctx.rotate(0.3); ctx.scale(1.5, 0.85); ctx.translate(-lakeCx, -lakeCy);
+      ctx.beginPath(); ctx.arc(lakeCx, lakeCy, 280, 0, Math.PI*2);
+      ctx.fillStyle = lakeGrad; ctx.fill();
+      ctx.restore();
+      // shimmer bands
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 2;
+      for (let i=0;i<3;i++){
+        const sy = lakeCy - 60 + i*40 + Math.sin(t*0.0008+i)*6;
+        ctx.beginPath(); ctx.moveTo(lakeCx-140, sy); ctx.quadraticCurveTo(lakeCx, sy+8, lakeCx+140, sy); ctx.stroke();
+      }
+      // reeds along the near shore
+      ctx.strokeStyle = pt.featureHi; ctx.lineWidth = 2;
+      for (let i=0;i<6;i++){
+        const a = lakeAngle - 0.5 + i*0.2;
+        const rx = cx + Math.cos(a)*170, ry = cy + Math.sin(a)*130;
+        const sway = Math.sin(t*0.002+i)*4;
+        ctx.beginPath(); ctx.moveTo(rx, ry); ctx.quadraticCurveTo(rx+sway, ry-14, rx+sway*1.5, ry-24); ctx.stroke();
+      }
+    }
+
+    // landing clearing beneath the ship
+    const clearGrad = ctx.createRadialGradient(cx,cy,4, cx,cy,150);
+    clearGrad.addColorStop(0, pt.clearingInner);
+    clearGrad.addColorStop(0.55, pt.clearingOuter);
+    clearGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.beginPath(); ctx.arc(cx,cy,150,0,Math.PI*2);
+    ctx.fillStyle = clearGrad; ctx.fill();
+
+    // ground-level texture: grass tufts, lava cracks, frost glints, or sand ripples
+    for (const g of groundDetail){
+      const gx = cx+g.dx, gy = cy+g.dy;
+      if (isEarth() && inEarthLake(gx, gy, 0)) continue; // no grass tufts in the water either
+      if (state.currentPlanetIndex === 1) drawLavaCrack(ctx, gx, gy, g, t);
+      else if (state.currentPlanetIndex === 2) drawFrostGlint(ctx, gx, gy, g, t);
+      else if (state.currentPlanetIndex === 3) drawSandRipple(ctx, gx, gy, g);
+      else drawGrassTuft(ctx, gx, gy, g, pt);
+    }
+
+    // terrain features ringing the clearing: trees, rock spires, ice spires, or dunes
+    for (const f of foliage){
+      const fx = cx+f.dx, fy = cy+f.dy;
+      if (isEarth() && inEarthLake(fx, fy, f.r)) continue; // trees only on land, never in the lake
+      if (state.currentPlanetIndex === 1) drawLavaRockSpire(ctx, fx, fy, f, pt, t);
+      else if (state.currentPlanetIndex === 2) drawIceSpire(ctx, fx, fy, f, pt, t);
+      else if (state.currentPlanetIndex === 3) drawSandDune(ctx, fx, fy, f, pt);
+      else drawJungleTree(ctx, fx, fy, f, pt);
+    }
+
+    // ambient particles: fireflies, embers, drifting snow, or dust motes
+    ctx.fillStyle = pt.ambient;
+    for (let i=0;i<14;i++){
+      let fx, fy;
+      if (state.currentPlanetIndex === 1){
+        const rise = (t*0.02 + i*70) % 500;
+        fx = cx + Math.sin(i*2.3 + t*0.0006)*130;
+        fy = cy + 220 - rise;
+      } else if (state.currentPlanetIndex === 2){
+        const fall = (t*0.03 + i*60) % 480;
+        fx = cx + Math.sin(i*1.7 + t*0.0004)*160 + Math.sin(t*0.001+i)*10;
+        fy = cy - 220 + fall;
+      } else if (state.currentPlanetIndex === 3){
+        const drift = (t*0.015 + i*80) % 600;
+        fx = cx - 280 + drift + Math.sin(i*3.1)*20;
+        fy = cy + Math.sin(i*2.1 + t*0.0005)*90;
+      } else {
+        const fa = i*1.9 + t*0.0004;
+        const fr = 90 + (i%5)*60;
+        fx = cx + Math.cos(fa)*fr; fy = cy + Math.sin(fa*0.7)*fr;
+      }
+      ctx.globalAlpha = 0.25 + 0.35*Math.sin(t*0.003+i);
+      ctx.beginPath(); ctx.arc(fx, fy, 1.6, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // range ring
+    ctx.beginPath(); ctx.arc(cx,cy,stats.range,0,Math.PI*2);
+    ctx.strokeStyle = 'rgba(79,214,192,0.12)'; ctx.lineWidth = 1.5/zoom; ctx.setLineDash([4,6]); ctx.stroke(); ctx.setLineDash([]);
+
+    if (isEarth()) drawLaunchpad(ctx, t); // the pad is where you landed — visible from wave 1, turrets get built onto it
+    for (const e of state.enemies) drawEnemy(ctx, e, t);
+    for (const p of state.projectiles){
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.crit?4:2.5,0,Math.PI*2);
+      ctx.fillStyle = p.crit ? '#ffd166' : '#e8eaf5'; ctx.fill();
+    }
+    if (isEarth()) drawJetRuns(ctx, t, stats);
+
+    drawShip(ctx, cx, cy, 1.5, state.turretAngle ?? -Math.PI/2, t, false);
+
+    // companion drones + attack-drone laser flash
+    const dronePos = computeDronePositions(cx, cy, state.droneAngle||0);
+    for (const fx of state.droneEffects){
+      const lifeLeft = Math.max(0, fx.expires - simTime);
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, lifeLeft/180);
+      ctx.strokeStyle = fx.color || '#ff5c73'; ctx.lineWidth = 2/zoom;
+      ctx.beginPath(); ctx.moveTo(fx.x1, fx.y1); ctx.lineTo(fx.x2, fx.y2); ctx.stroke();
+      ctx.restore();
+    }
+    if (state.droneAttack) drawDrone(ctx, dronePos.attack.x, dronePos.attack.y, 'attack', t, (state.droneAngle||0) + Math.PI/2);
+    if (state.droneDebuff) drawDrone(ctx, dronePos.debuff.x, dronePos.debuff.y, 'debuff', t, (state.droneAngle||0) + Math.PI + Math.PI/2);
+
+    // super weapon shockwave pulses
+    const pulseDuration = 650, maxPulseRadius = 480;
+    state.superPulses = state.superPulses.filter(p => simTime - p.start < pulseDuration);
+    for (const p of state.superPulses){
+      const progress = (simTime - p.start) / pulseDuration;
+      const radius = progress * maxPulseRadius;
+      const alpha = (1 - progress) * 0.8;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(192,132,252,${alpha})`;
+      ctx.lineWidth = Math.max(1, (1-progress) * 10);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius*0.6, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(255,255,255,${alpha*0.5})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+    ctx.restore();
+  }
+
+  let homeShipY = null;
+  function updateHomeShipAnchor(){
+    const topBarEl = document.getElementById('homeTopBar');
+    const cardGridEl = document.querySelector('#screen-home .cardGrid');
+    if (!topBarEl || !cardGridEl) return;
+    const canvasRect = shipPrev.getBoundingClientRect();
+    const topBarBottom = topBarEl.getBoundingClientRect().bottom - canvasRect.top;
+    const cardGridTop = cardGridEl.getBoundingClientRect().top - canvasRect.top;
+    homeShipY = (topBarBottom + cardGridTop) / 2;
+  }
+
+  function resizeShipPreview(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    shipPrev.width = Math.max(1, Math.round(shipPrev.clientWidth * dpr));
+    shipPrev.height = Math.max(1, Math.round(shipPrev.clientHeight * dpr));
+    shipPrevCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    updateHomeShipAnchor();
+  }
+  window.addEventListener('resize', ()=>{ if (currentScreen === 'home') resizeShipPreview(); });
+
+  const homeStars = [];
+  (function initHomeStars(){
+    for (let i=0;i<70;i++){
+      homeStars.push({ xFrac: Math.random(), yFrac: Math.random(), speed: 1.2+Math.random()*2.6, len: 10+Math.random()*18 });
+    }
+  })();
+
+  function renderShipPreview(){
+    const t = performance.now();
+    const w = shipPrev.clientWidth, h = shipPrev.clientHeight;
+    if (w === 0 || h === 0){ requestAnimationFrame(renderShipPreview); return; }
+
+    // The ship is cruising through space on the home screen, so its shield
+    // regenerates here too (same per-tick rate as in battle). After a rough
+    // boss fight or a jump to a new planet, the ring visibly refills.
+    const stats = computedStats();
+    state.hp.maxShield = stats.maxShield;
+    if (renderShipPreview._lastT === undefined) renderShipPreview._lastT = t;
+    renderShipPreview._regenAccum = Math.min(60000, (renderShipPreview._regenAccum || 0) + (t - renderShipPreview._lastT));
+    renderShipPreview._lastT = t;
+    while (renderShipPreview._regenAccum >= 200){
+      renderShipPreview._regenAccum -= 200;
+      if (state.hp.shield < stats.maxShield){
+        state.hp.shield = Math.min(stats.maxShield, state.hp.shield + stats.shieldRegen);
+      }
+    }
+
+    const shipY = homeShipY !== null ? homeShipY : h*0.4;
+    shipPrevCtx.clearRect(0,0,w,h);
+
+    // deep space backdrop
+    const bg = shipPrevCtx.createRadialGradient(w/2,shipY,10, w/2,shipY,Math.max(w,h)*0.85);
+    bg.addColorStop(0,'#0f1a2c'); bg.addColorStop(1,'#04060c');
+    shipPrevCtx.fillStyle = bg; shipPrevCtx.fillRect(0,0,w,h);
+
+    // stars rushing past, streaking downward past the ship (nose points up = forward)
+    shipPrevCtx.strokeStyle = 'rgba(190,225,255,0.75)';
+    shipPrevCtx.lineWidth = 1.3;
+    for (const s of homeStars){
+      s.yFrac += (s.speed * 1.4) / h;
+      if (s.yFrac > 1.05){ s.yFrac = -0.05; s.xFrac = Math.random(); }
+      const sx = s.xFrac * w, sy = s.yFrac * h;
+      shipPrevCtx.globalAlpha = 0.5;
+      shipPrevCtx.beginPath();
+      shipPrevCtx.moveTo(sx, sy);
+      shipPrevCtx.lineTo(sx, sy - s.len);
+      shipPrevCtx.stroke();
+    }
+    shipPrevCtx.globalAlpha = 1;
+
+    const shipScale = Math.min(w, h) / 90;
+    drawShip(shipPrevCtx, w/2, shipY, shipScale, -Math.PI/2, t, true);
+    requestAnimationFrame(renderShipPreview);
+  }
+
+  // ---------- Rewarded ad adapter (3 layers, first match wins) ----------
+  // 1. Capacitor + @capacitor-community/admob → Play Store build (real earnings)
+  // 2. Google H5 Games Ads (adBreak)          → hosted web build (real earnings)
+  // 3. Simulated 5s test ad                  → local dev / unconfigured fallback
+  // Rewarded video is the shortest ad format (~15-30s, user-initiated) — the
+  // right fit for "short ads" on revive / 2x-coin rewards.
+  const ADMOB_REWARDED_ID = 'ca-app-pub-3940256099942544/5224354937'; // Google's TEST unit id — replace with your own AdMob unit for release
+  function simulateTestAd(onReward){
+    const ov = document.createElement('div');
+    ov.id = 'testAdOverlay';
+    ov.innerHTML = '<div class="card"><h3>▶ Test Ad</h3><p class="sub">Simulated rewarded ad (5s)</p><div id="testAdBarWrap"><div id="testAdBar"></div></div></div>';
+    document.getElementById('phone').appendChild(ov);
+    const bar = ov.querySelector('#testAdBar');
+    let left = 5;
+    const iv = setInterval(()=>{
+      left -= 1;
+      bar.style.width = ((5-left)/5*100) + '%';
+      if (left <= 0){ clearInterval(iv); ov.remove(); onReward(); }
+    }, 1000);
+  }
+  window.showRewardedAd = function(onReward){
+    // 1) Play Store build: Capacitor + AdMob plugin (npm i @capacitor-community/admob)
+    const cap = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob;
+    if (cap){
+      const rewardHandler = (ev)=>{
+        document.removeEventListener('onAdmobReward', rewardHandler);
+        if (!ev || ev.reward) onReward();
+      };
+      document.addEventListener('onAdmobReward', rewardHandler);
+      cap.prepareRewardVideoAd({ adID: ADMOB_REWARDED_ID })
+        .then(()=> cap.showRewardVideoAd())
+        .catch(()=> document.removeEventListener('onAdmobReward', rewardHandler));
+      return;
+    }
+    // 2) Hosted web build: Google H5 Games Ads SDK (see the commented script
+    //    tag near the cloud-sync module). Earns once AdSense approves the site.
+    if (typeof adBreak === 'function'){
+      adBreak({
+        type: 'reward',
+        name: 'rewarded',
+        beforeReward: (showAd)=> showAd(),
+        adDismissed: ()=>{},       // closed early — no reward
+        adViewed: ()=> onReward(), // watched to the end — reward!
+      });
+      return;
+    }
+    // 3) Local dev fallback: 5s simulated ad so the flow is testable anywhere
+    simulateTestAd(onReward);
+  };
+
+  // ---------- Ship down / revive ----------
+  function withRewardedAd(onReward){
+    // Ad-skip tickets (earned from the Earth victory) are spent automatically
+    // before an ad is ever requested.
+    if (state.adTickets > 0){
+      state.adTickets -= 1;
+      saveGame(); updateUI();
+      showToast('🎟 Ticket used — ' + state.adTickets + ' left');
+      onReward();
+      return;
+    }
+    if (typeof window.showRewardedAd === 'function'){ window.showRewardedAd(onReward); }
+    else { onReward(); }
+  }
+  // Revive budget: 5 per planet per day (resets at local midnight);
+  // the first 2 each day are free, the rest require a rewarded ad.
+  function todayKey(){ return (new Date()).setHours(0,0,0,0); }
+  function revivesUsedToday(){
+    const t = todayKey();
+    if (state.reviveBudget.date !== t){
+      state.reviveBudget.date = t;
+      state.reviveBudget.used = state.reviveBudget.used.map(()=>0);
+    }
+    return state.reviveBudget.used[state.currentPlanetIndex] || 0;
+  }
+  function revivesLeftToday(){ return Math.max(0, state.maxRevives - revivesUsedToday()); }
+  function handleShipDown(){
+    cancelWaveAdvance(); // ship is down: any pending wave advance is void
+    state.gameOverShown = true;
+    const used = revivesUsedToday();
+    if (revivesLeftToday() > 0){
+      const needsAd = used >= state.freeRevivesPerDay;
+      const reviveBtn = needsAd
+        ? (state.adTickets > 0
+            ? {label:'⚡ Revive (🎟 x'+state.adTickets+')', action:()=>withRewardedAd(reviveShip)}
+            : {label:'▶ Watch Ad to Revive', action:()=>withRewardedAd(reviveShip)})
+        : {label:'⚡ Revive (Free)', action:reviveShip};
+      showOverlay('Ship Critical!',
+        `You'll restart wave ${state.wave} fresh with full shields. Revive ${used+1} of ${state.maxRevives} today on this planet — the first ${state.freeRevivesPerDay} each day are free.`,
+        [ reviveBtn, {label:'Abandon Run', cls:'dangerBtn', action:abandonRun} ]);
+    } else {
+      showOverlay('No Revives Left Today',
+        `You've used all ${state.maxRevives} revives on this planet today — they refill at midnight. You reached wave ${state.wave}. Restart the planet to try again — your upgrades are kept.`,
+        [ {label:'Restart Planet (Wave 1)', action:restartPlanet} ]);
+    }
+  }
+  function reviveShip(){
+    cancelWaveAdvance();
+    SFX.revive();
+    revivesUsedToday(); // normalizes the daily budget if the day rolled over
+    state.reviveBudget.used[state.currentPlanetIndex] = (state.reviveBudget.used[state.currentPlanetIndex]||0) + 1;
+    state.projectiles = [];
+    state.gameOverShown = false; hideOverlay();
+    const stats = computedStats();
+    state.hp.maxShield = stats.maxShield;
+    state.hp.shield = stats.maxShield;
+    spawnWave();
+    updateUI();
+  }
+  function abandonRun(){
+    cancelWaveAdvance();
+    state.wave = 1; state.revivesUsed = 0;
+    state.enemies=[]; state.projectiles=[]; state.gameOverShown=false;
+    hideOverlay();
+    showScreen('home');
+    saveGame();
+  }
+  function saveCurrentPlanetProgress(){
+    const p = state.planetProgress[state.currentPlanetIndex];
+    p.wave = state.wave; p.prestige = state.prestige;
+    p.enemyMultiplier = state.enemyMultiplier; p.coinMultiplier = state.coinMultiplier;
+    p.bestWave = state.bestWave; p.coins = state.coins;
+  }
+
+  // ---------- Save / Load (device-local; not a cross-device sync) ----------
+  const SAVE_KEY = 'planetDefenseSaveV1';
+  let lastAutoSaveTime = 0;
+  function maybeAutoSave(){
+    const now = performance.now();
+    if (now - lastAutoSaveTime > 4000){
+      lastAutoSaveTime = now;
+      saveGame();
+    }
+  }
+
+  function buildSaveData(){
+    saveCurrentPlanetProgress();
+    return {
+      coins: state.coins, gems: state.gems,
+      turret: state.turret, ship: state.ship, cosmetics: state.cosmetics,
+      metaLevel: state.metaLevel, metaMult: state.metaMult,
+      droneDebuff: state.droneDebuff, droneAttack: state.droneAttack,
+      planetProgress: state.planetProgress, unlockedPlanets: state.unlockedPlanets,
+      currentPlanetIndex: state.currentPlanetIndex,
+      tutorial: state.tutorial, dailyLogin: state.dailyLogin,
+      reviveBudget: state.reviveBudget,
+      padRepair: state.padRepair, padTurrets: state.padTurrets,
+      padCalibration: state.padCalibration, padJets: state.padJets,
+      padShield: state.padShield,
+      earthPadIntroDone: state.earthPadIntroDone,
+      adTickets: state.adTickets, earthVictoryClaimed: state.earthVictoryClaimed,
+      settings: state.settings,
+      savedAt: Date.now(),
+    };
+  }
+
+  function applySaveData(d){
+    if (!d) return;
+    if (d.coins !== undefined) state.coins = d.coins; // legacy/global fallback, overridden below by per-planet value
+    if (d.gems !== undefined) state.gems = d.gems;
+    if (d.turret) Object.assign(state.turret, d.turret);
+    if (d.ship) Object.assign(state.ship, d.ship);
+    if (d.cosmetics) Object.assign(state.cosmetics, d.cosmetics);
+    if (d.metaLevel) Object.assign(state.metaLevel, d.metaLevel);
+    if (d.metaMult) Object.assign(state.metaMult, d.metaMult);
+    if (d.droneDebuff !== undefined) state.droneDebuff = d.droneDebuff;
+    if (d.droneAttack !== undefined) state.droneAttack = d.droneAttack;
+    if (d.settings) Object.assign(state.settings, d.settings);
+    if (d.planetProgress) state.planetProgress = d.planetProgress;
+    if (d.unlockedPlanets) state.unlockedPlanets = d.unlockedPlanets;
+    while (state.planetProgress.length < planets.length){
+      state.planetProgress.push({ wave:1, prestige:0, enemyMultiplier:1, coinMultiplier:1, bestWave:1, completed:false, visited:false, coins:0 });
+    }
+    while (state.unlockedPlanets.length < planets.length){
+      state.unlockedPlanets.push(false);
+    }
+    if (d.currentPlanetIndex !== undefined) state.currentPlanetIndex = d.currentPlanetIndex;
+    // migrate older saves that predate per-planet coins: give the currently active
+    // planet whatever the old global stash was, everyone else starts fresh at 0
+    state.planetProgress.forEach((p, i) => {
+      if (p.coins === undefined) p.coins = (i === state.currentPlanetIndex) ? (state.coins || 0) : 0;
+    });
+    if (d.tutorial) Object.assign(state.tutorial, d.tutorial);
+    if (d.dailyLogin) Object.assign(state.dailyLogin, d.dailyLogin);
+    if (d.reviveBudget) state.reviveBudget = d.reviveBudget; // daily revive budget (older saves fall back to defaults)
+    // Earth launchpad fortifications — four independent tracks.
+    // Migration: older saves used a single launchpadLvl (1-10); map it across
+    // so no progress is lost (old 9 = 1 jet, old 10 = the full 3-jet squadron).
+    if (d.launchpadLvl !== undefined){
+      state.padRepair      = d.launchpadLvl >= 1 ? 1 : 0;
+      state.padTurrets     = Math.max(0, Math.min(4, d.launchpadLvl - 1));
+      state.padCalibration = Math.max(0, Math.min(3, d.launchpadLvl - 5));
+      state.padJets        = d.launchpadLvl >= 10 ? 3 : (d.launchpadLvl >= 9 ? 1 : 0);
+    }
+    if (d.padRepair !== undefined) state.padRepair = d.padRepair;
+    if (d.padTurrets !== undefined) state.padTurrets = d.padTurrets;
+    if (d.padCalibration !== undefined) state.padCalibration = d.padCalibration;
+    if (d.padJets !== undefined) state.padJets = d.padJets;
+    if (d.padShield !== undefined) state.padShield = d.padShield; // base Shield Generator
+    if (d.earthPadIntroDone) state.earthPadIntroDone = true; // one-time Pad intro on Earth
+    if (d.adTickets !== undefined) state.adTickets = d.adTickets; // ad-skip tickets
+    if (d.earthVictoryClaimed) state.earthVictoryClaimed = true; // one-time Earth victory reward
+    const p = state.planetProgress[state.currentPlanetIndex];
+    if (p){
+      state.wave = p.wave; state.prestige = p.prestige;
+      state.enemyMultiplier = p.enemyMultiplier; state.coinMultiplier = p.coinMultiplier;
+      state.bestWave = p.bestWave; state.coins = p.coins || 0;
+    }
+  }
+
+  let resetInProgress = false;
+  function saveGame(){
+    if (resetInProgress) return; // don't rewrite a save we're deliberately wiping
+    try{
+      const data = buildSaveData();
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      if (window.cloudSaveData) window.cloudSaveData(data); // fire-and-forget; no-op if signed out
+    } catch(e){ console.warn('Save failed (storage unavailable):', e); }
+  }
+
+  function loadGame(){
+    try{
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return false;
+      applySaveData(JSON.parse(raw));
+      return true;
+    } catch(e){ console.warn('Load failed (storage unavailable):', e); return false; }
+  }
+
+  // ---------- Cloud sync (Google sign-in via Firebase) ----------
+  // window.cloudSaveData / window.cloudLoadData / window.onCloudSignedIn are
+  // provided by the Firebase module script below, if configured. Everything
+  // here degrades gracefully to local-only saves if Firebase isn't set up.
+  window.onCloudSignedIn = async function(){
+    updateCloudStatusUI(); // reflect sign-in immediately, regardless of sync outcome below
+    try{
+      const cloudData = window.cloudLoadData ? await window.cloudLoadData() : null;
+      const localRaw = localStorage.getItem(SAVE_KEY);
+      const localData = localRaw ? JSON.parse(localRaw) : null;
+      if (cloudData && (!localData || (cloudData.savedAt||0) >= (localData.savedAt||0))){
+        applySaveData(cloudData);
+        updateUI();
+      }
+      saveGame(); // reconcile: push whichever save "won" back to both local + cloud
+    } catch(e){ console.warn('Cloud sign-in sync failed:', e); }
+  };
+  window.onCloudSignedOut = function(){ updateCloudStatusUI(); };
+  function updateCloudStatusUI(){
+    const el = document.getElementById('cloudStatus');
+    if (!el) return;
+    if (window.cloudUser){
+      el.textContent = `☁️ ${window.cloudUser.displayName || 'Signed in'}`;
+      el.title = 'Signed in — progress syncs across devices. Tap to sign out.';
+    } else {
+      el.textContent = '☁️ Sign in';
+      el.title = 'Sign in with Google to sync progress across devices';
+    }
+  }
+
+  // ---------- Daily login streak (real calendar days, resets if a day is missed) ----------
+  const dailyRewards = [
+    {coins:50,  gems:5},
+    {coins:80,  gems:8},
+    {coins:120, gems:10},
+    {coins:160, gems:15},
+    {coins:220, gems:20},
+    {coins:300, gems:25},
+    {coins:500, gems:50},
+  ];
+  function daysBetween(a, b){
+    const A = new Date(a); A.setHours(0,0,0,0);
+    const B = new Date(b); B.setHours(0,0,0,0);
+    return Math.round((B-A)/86400000);
+  }
+  function isClaimedToday(){
+    if (!state.dailyLogin.lastClaimDate) return false;
+    return daysBetween(state.dailyLogin.lastClaimDate, new Date()) === 0;
+  }
+  function currentDailyDay(){
+    if (!state.dailyLogin.lastClaimDate) return 1;
+    const diff = daysBetween(state.dailyLogin.lastClaimDate, new Date());
+    if (diff === 0) return state.dailyLogin.streak;       // already claimed today
+    if (diff === 1) return (state.dailyLogin.streak % 7) + 1; // streak continues
+    return 1; // missed a day — reset
+  }
+  function claimDaily(){
+    if (isClaimedToday()) return;
+    const day = currentDailyDay();
+    const reward = dailyRewards[day-1];
+    state.coins += reward.coins; state.gems += reward.gems;
+    state.dailyLogin.streak = day;
+    state.dailyLogin.lastClaimDate = (new Date()).setHours(0,0,0,0); // local-midnight epoch ms (old string saves still parse)
+    saveGame();
+    updateUI();
+  }
+
+  function switchPlanet(index){
+    if (!state.unlockedPlanets[index]) return;
+    cancelWaveAdvance();
+    saveCurrentPlanetProgress();
+    state.currentPlanetIndex = index;
+    const p = state.planetProgress[index];
+    state.wave = p.wave; state.prestige = p.prestige;
+    state.enemyMultiplier = p.enemyMultiplier; state.coinMultiplier = p.coinMultiplier;
+    state.bestWave = p.bestWave; state.coins = p.coins || 0;
+    if (!p.visited){
+      // First-ever arrival on this planet: fresh loadout, same as a prestige reset.
+      // Permanent multipliers, gem weapon tiers, drones, and cosmetics are untouched.
+      state.turret.fireRateLvl = 0; state.turret.dmgLvl = 0; state.turret.critLvl = 0; state.turret.rangeLvl = 0;
+      state.ship.shieldCapLvl = 0; state.ship.shieldRegenLvl = 0;
+      p.visited = true;
+    }
+    state.enemies = []; state.projectiles = []; state.revivesUsed = 0;
+    state.gameOverShown = false; state.doubleCoinsThisWave = false;
+    // Arriving on a new planet, the ship keeps whatever shield survived the trip
+    // (clamped to the new max) and regenerates the rest while cruising in space —
+    // watch the ring on the home screen refill before the first wave launches.
+    const stats = computedStats();
+    state.hp.maxShield = stats.maxShield;
+    state.hp.shield = Math.min(state.hp.shield, stats.maxShield);
+    spawnWave();
+    updateUI();
+    saveGame();
+  }
+
+  function restartPlanet(){
+    cancelWaveAdvance();
+    state.wave = 1; state.revivesUsed = 0;
+    state.enemies=[]; state.projectiles=[]; state.gameOverShown=false;
+    const stats = computedStats(); state.hp.maxShield = stats.maxShield; state.hp.shield = stats.maxShield;
+    hideOverlay(); spawnWave();
+    saveGame();
+  }
+
+  function showPlanetComplete(){
+    const idx = state.currentPlanetIndex;
+    const hasNext = idx < 3; // planets 0,1,2 auto-unlock the next one on a plain wave-20 clear; Earth unlocks on a Planet IV clear (see checkEarthUnlock)
+    const justUnlocked = hasNext && !state.unlockedPlanets[idx+1];
+    if (hasNext) state.unlockedPlanets[idx+1] = true;
+    state.planetProgress[idx].completed = true;
+
+    const gemReward = Math.round(25 * state.coinMultiplier);
+    state.gems += gemReward;
+
+    const buttons = [
+      { label:'Prestige This Planet', action:prestigePlanet },
+    ];
+    if (hasNext){
+      buttons.push({ label:`Go to ${planets[idx+1].name}`, action:()=>{ hideOverlay(); switchPlanet(idx+1); showScreen('home'); } });
+    }
+    buttons.push({ label:'Return to Home', cls:'ghost', action:()=>{hideOverlay(); showScreen('home');} });
+
+    let desc;
+    if (justUnlocked){
+      desc = `The planet boss is down and its resources are yours — +${gemReward} gems banked. Your scanners have picked up a signal from ${planets[idx+1].name} — ${planets[idx+1].subtitle} — another step on the way home. It's unlocked! Prestiging here replays this planet tougher for even more resources — enemies hit harder, coin payouts scale up, but your turret/ship upgrade levels reset to 0. Drones, cosmetics, and gem-bought multipliers stay.`;
+    } else if (idx === 3){
+      desc = `The planet boss is down — +${gemReward} gems banked. That's the last of the four worlds stripped for resources, and your nav computer finally has enough data to plot a course home. (Prestige runs remain available from the Star Chart for tougher replays with bigger payouts — they're optional.)`;
+    } else {
+      desc = `The planet boss is down again — +${gemReward} gems banked toward getting you home. Prestige to replay this planet tougher for even greater rewards — enemies hit harder, coin payouts scale up, but your turret/ship upgrade levels reset to 0. Drones, cosmetics, and gem-bought multipliers stay.`;
+    }
+
+    showOverlay(`${planets[idx].name} Secured 🎉`, desc, buttons);
+    saveGame();
+    // if this clear means every world has now been prestiged, the wormhole story
+    // takes over (this overlay gets replaced by it)
+    checkEarthUnlock();
+  }
+  // Earth unlocks as soon as Planet IV is cleared — the wormhole home opens and
+  // endless Earth mode begins. Prestige is an optional "new game+" for tougher
+  // replays with bigger payouts, never a gate.
+  function checkEarthUnlock(){
+    if (state.unlockedPlanets[4]) return;
+    if (!(state.planetProgress[3] && state.planetProgress[3].completed)) return;
+    state.unlockedPlanets[4] = true;
+    showOverlay('Wormhole Detected! 🌌',
+      "Sensors lock onto a familiar signature — stable, and heading somewhere unmistakable. You've wrung everything you can from four worlds, and the coordinates resolve into one word: Earth. You're going home.<br><br>But your combat log picks up something else: residual wormhole activity, tuned to the frequencies of every ruler you deposed along the way. They're not done with you. <b>Earth</b> is now unlocked — 100 waves of mixed forces from every world you've conquered, on the shore of a quiet lake. Defend all 100 and the wormhole closes for good — you win the game. Prestige runs are still available from the Star Chart whenever you want tougher worlds with bigger payouts.",
+      [
+        { label:'Go to Earth', action:()=>{ hideOverlay(); switchPlanet(4); showScreen('home'); } },
+        { label:'Return to Home', cls:'ghost', action:()=>{hideOverlay(); showScreen('home');} },
+      ]);
+    saveGame();
+  }
+
+  function prestigePlanet(){
+    cancelWaveAdvance();
+    state.prestige += 1;
+    state.enemyMultiplier *= 1.35; state.coinMultiplier *= 1.2;
+    state.wave = 1; state.revivesUsed = 0;
+    state.enemies=[]; state.projectiles=[];
+    state.turret.fireRateLvl = 0; state.turret.dmgLvl = 0; state.turret.critLvl = 0; state.turret.rangeLvl = 0;
+    state.ship.shieldCapLvl = 0; state.ship.shieldRegenLvl = 0;
+    state.planetProgress[state.currentPlanetIndex].completed = false;
+    const stats = computedStats(); state.hp.maxShield = stats.maxShield; state.hp.shield = stats.maxShield;
+    state.gameOverShown = false; hideOverlay(); spawnWave();
+    saveGame();
+    checkEarthUnlock();
+  }
+
+  function showOverlay(title, desc, buttons){
+    const overlay = document.getElementById('overlay');
+    const card = document.getElementById('overlayCard');
+    card.innerHTML = `<h2>${title}</h2><p>${desc}</p><div class="btnRow" id="ovBtns"></div>`;
+    const row = card.querySelector('#ovBtns');
+    buttons.forEach(b=>{
+      const btn=document.createElement('button');
+      btn.textContent=b.label; if(b.cls) btn.classList.add(b.cls);
+      if(b.action) btn.onclick=b.action;
+      row.appendChild(btn);
+    });
+    overlay.style.display='flex';
+  }
+  function hideOverlay(){ document.getElementById('overlay').style.display='none'; }
+
+  // ---------- UI wiring ----------
+  function buy(key){
+    const cfg = upgradeCfg[key];
+    const level = state[cfg.owner][cfg.lvlKey];
+    if (cfg.maxLevel !== undefined && level >= cfg.maxLevel) return;
+    const c = cost(key);
+    if (state.coins < c) return;
+    state.coins -= c;
+    state[cfg.owner][cfg.lvlKey]++;
+    updateUI();
+  }
+  document.querySelectorAll('.upBuy').forEach(btn=>{
+    btn.onclick = ()=>buy(btn.dataset.key);
+  });
+
+  document.querySelectorAll('.lpBuy').forEach(btn=>{
+    btn.onclick = ()=>{
+      const track = btn.dataset.pad;
+      const cfg = launchpadCfg[track];
+      if (padLevel(track) >= cfg.maxLevel) return;
+      if (track === 'calibration' && padLevel('turrets') < 1) return; // nothing to calibrate yet
+      const c = padCost(track);
+      if (state.coins < c) return;
+      state.coins -= c;
+      state[padStateKey[track]] += 1;
+      SFX.buy();
+      updateUI();
+    };
+  });
+
+  document.querySelectorAll('[data-tier]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const tier = parseInt(btn.dataset.tier);
+      const costs = {1:50,2:120,3:300}, bonuses={1:1.4,2:1.8,3:2.5};
+      if (state.turret.tierBonus >= bonuses[tier]) return;
+      if (state.gems < costs[tier]) return;
+      if (tier>1 && state.turret.tierBonus < bonuses[tier-1]) return;
+      state.gems -= costs[tier]; state.turret.tierBonus = bonuses[tier];
+      updateUI();
+    };
+  });
+
+  document.querySelectorAll('.droneBuy').forEach(btn=>{
+    btn.onclick = ()=>{
+      const key = btn.dataset.drone;
+      const owned = key === 'debuff' ? state.droneDebuff : state.droneAttack;
+      if (owned || state.coins < 80) return;
+      state.coins -= 80;
+      if (key === 'debuff') state.droneDebuff = true; else state.droneAttack = true;
+      updateUI();
+    };
+  });
+
+  document.querySelectorAll('.cosmeticBuy').forEach(btn=>{
+    btn.onclick = ()=>{
+      const key = btn.dataset.cosmetic;
+      const cost = parseInt(btn.dataset.cost);
+      if (state.cosmetics[key] || state.gems < cost) return;
+      state.gems -= cost;
+      state.cosmetics[key] = true;
+      btn.disabled = true; btn.textContent = 'Owned';
+      updateUI();
+    };
+  });
+
+  document.querySelectorAll('.metaBuy').forEach(btn=>{
+    btn.onclick = ()=> buyMeta(btn.dataset.key);
+  });
+
+  document.getElementById('claimDaily').onclick = claimDaily;
+  document.getElementById('adGems').onclick = ()=>{ withRewardedAd(()=>{ state.gems += 5; updateUI(); }); };
+  document.getElementById('superBtn').onclick = ()=>{
+    unleashSuper();
+    if (state.tutorial.active && tutorialSteps[state.tutorial.step].id === 'forceSuperDischarge' && !state.tutorial.superDischarged){
+      state.tutorial.superDischarged = true;
+      // clear the instruction card straight away so the pulse is fully visible,
+      // then advance once the shockwave has played out
+      clearTutorialUI();
+      setTimeout(()=>{ advanceTutorial(); }, 1200);
+    }
+  };
+
+  function prestigePlanetByIndex(i){
+    const ok = confirm(`Prestige ${planets[i].name}? This resets its turret/ship upgrade levels and makes it tougher, but coin payouts scale up — and your permanent multipliers, drones, and cosmetics all stay. Continue?`);
+    if (!ok) return;
+    if (i !== state.currentPlanetIndex) switchPlanet(i);
+    prestigePlanet();
+    renderPlanetSelector();
+  }
+
+  function renderPlanetSelector(){
+    const sel = document.getElementById('planetSelector');
+    sel.innerHTML = '';
+    planets.forEach((p, i) => {
+      const unlocked = state.unlockedPlanets[i];
+      const isSelected = i === state.currentPlanetIndex;
+      const completed = state.planetProgress[i] && state.planetProgress[i].completed;
+      const effectivePrestige = isSelected ? state.prestige : (state.planetProgress[i] ? state.planetProgress[i].prestige : 0);
+      const card = document.createElement('div');
+      card.className = 'planetCard' + (isSelected ? ' selected' : '') + (unlocked ? '' : ' locked');
+      let lockNote = '';
+      if (!unlocked && i === 4){
+        // Earth: show exactly what's still missing so the requirement isn't a mystery
+        const securedCount = [0,1,2,3].filter(pi => state.planetProgress[pi] && state.planetProgress[pi].completed).length;
+        lockNote = `<div class="pblurb">Unlocks after clearing Planet IV — the wormhole home. ${securedCount}/4 worlds secured.</div>`;
+      }
+      card.innerHTML = unlocked
+        ? `<div class="prow"><div><div class="pname">${p.name}</div><div class="psub">${p.subtitle}</div></div>
+           <div class="pstatus">${isSelected ? '✅ Selected' : 'Tap to switch'}</div></div>
+           <div class="pblurb">"${p.blurb}"</div>
+           ${completed ? `<button class="prestigePlanetBtn">🔁 Prestige (Tier ${effectivePrestige})</button>` : ''}`
+        : `<div class="prow"><div><div class="pname">${p.name}</div><div class="psub">Locked</div></div>
+           <div class="plock">🔒</div></div>${lockNote}`;
+      if (unlocked) card.onclick = ()=> { switchPlanet(i); showScreen('home'); };
+      if (completed){
+        const btn = card.querySelector('.prestigePlanetBtn');
+        btn.onclick = (e)=>{ e.stopPropagation(); prestigePlanetByIndex(i); };
+      }
+      sel.appendChild(card);
+    });
+  }
+
+  // Cheap per-frame battle HUD refresh (coins, wave, enemies, shield/super
+  // bars, 2x-coins button) so the heavy full updateUI() — which rebuilds a lot
+  // of DOM — only runs a few times per second instead of every frame.
+  let lastFullUITime = 0;
+  function updateBattleHUD(){
+    document.querySelectorAll('.coinCount').forEach(el=>el.textContent = Math.floor(state.coins));
+    document.querySelectorAll('.reviveCount').forEach(el=>el.textContent = revivesLeftToday());
+    document.querySelectorAll('.waveNum').forEach(el=>el.textContent = state.wave);
+    document.querySelectorAll('.waveMax').forEach(el=>el.textContent = isEarth() ? 100 : 20);
+    document.querySelectorAll('.enemyCount').forEach(el=>el.textContent = state.enemies.length);
+    const stats = computedStats();
+    const shieldPct = Math.max(0, Math.min(100, (state.hp.shield/stats.maxShield)*100));
+    document.getElementById('shieldBar').style.width = shieldPct + '%';
+    document.getElementById('superBar').style.width = (state.super.charge/state.super.max*100) + '%';
+    document.getElementById('superBtn').style.display = state.super.charge >= state.super.max ? 'block' : 'none';
+    const dcb = document.getElementById('doubleCoinBtn');
+    if (dcb){ dcb.style.display = (state.waveActive && !state.doubleCoinsThisWave) ? 'block' : 'none'; }
+    const ats = document.getElementById('adTicketStat');
+    if (ats){
+      ats.style.display = state.adTickets > 0 ? '' : 'none';
+      document.getElementById('adTicketCount').textContent = state.adTickets;
+    }
+  }
+  function updateUI(){
+    checkTutorialProgress();
+    const dailyDay = currentDailyDay();
+    const dailyReward = dailyRewards[dailyDay-1];
+    const dailyClaimed = isClaimedToday();
+    const dailyRow = document.getElementById('dailyRow');
+    if (dailyRow){
+      dailyRow.querySelector('.label').textContent = `Daily Login — Day ${dailyDay}`;
+      dailyRow.querySelector('.sub').textContent = `+${dailyReward.coins} coins, +${dailyReward.gems} gems`;
+    }
+    const dailyBtn = document.getElementById('claimDaily');
+    if (dailyBtn){
+      dailyBtn.disabled = dailyClaimed;
+      dailyBtn.textContent = dailyClaimed ? 'Claimed' : 'Claim';
+    }
+    document.querySelectorAll('.coinCount').forEach(el=>el.textContent = Math.floor(state.coins));
+    document.querySelectorAll('.gemCount').forEach(el=>el.textContent = state.gems);
+    document.querySelectorAll('.prestigeCount').forEach(el=>el.textContent = state.prestige);
+    document.querySelectorAll('.reviveCount').forEach(el=>el.textContent = revivesLeftToday());
+    document.querySelectorAll('.waveNum').forEach(el=>el.textContent = state.wave);
+    document.querySelectorAll('.waveMax').forEach(el=>el.textContent = isEarth() ? 100 : 20);
+    document.querySelectorAll('.enemyCount').forEach(el=>el.textContent = state.enemies.length);
+    document.getElementById('homeWave').textContent = state.bestWave;
+    document.getElementById('homeRevives').textContent = revivesLeftToday();
+    const pt = activePlanet();
+    document.getElementById('planetName').textContent = pt.name;
+    document.getElementById('planetSub').textContent = pt.subtitle;
+    document.getElementById('planetLabel').textContent = `${pt.name} — ${pt.subtitle}`;
+    renderPlanetSelector();
+
+    document.querySelectorAll('.upLvl').forEach(el=>{
+      const key = el.dataset.key;
+      const cfg = upgradeCfg[key];
+      el.textContent = 'Lv ' + state[cfg.owner][cfg.lvlKey];
+    });
+    document.querySelectorAll('.upBuy').forEach(btn=>{
+      const cfg = upgradeCfg[btn.dataset.key];
+      const level = state[cfg.owner][cfg.lvlKey];
+      if (cfg.maxLevel !== undefined && level >= cfg.maxLevel){
+        btn.disabled = true; btn.textContent = 'MAX';
+      } else {
+        btn.disabled = state.coins < cost(btn.dataset.key);
+        btn.innerHTML = `↑ <span class="upCost" data-key="${btn.dataset.key}">${cost(btn.dataset.key)}</span>c`;
+      }
+    });
+    // Launchpad (Earth only): 4th button + drawer tab visibility, per-track levels/costs
+    const lpVisible = isEarth();
+    const lpBtn = document.getElementById('launchpadUpgBtn');
+    if (lpBtn) lpBtn.style.display = lpVisible ? '' : 'none';
+    const lpTab = document.querySelector('.drawerTab[data-cat="launchpad"]');
+    if (lpTab) lpTab.style.display = lpVisible ? '' : 'none';
+    document.querySelectorAll('.lpBuy').forEach(btn=>{
+      const track = btn.dataset.pad;
+      const cfg = launchpadCfg[track];
+      const lvl = padLevel(track);
+      const gated = (track === 'calibration' && padLevel('turrets') < 1); // need a turret first
+      if (lvl >= cfg.maxLevel){ btn.disabled = true; btn.textContent = 'MAX'; }
+      else if (gated){ btn.disabled = true; btn.textContent = '🔒'; }
+      else {
+        btn.disabled = state.coins < padCost(track);
+        btn.innerHTML = `↑ <span class="upCost">${padCost(track)}</span>c`;
+      }
+    });
+    document.getElementById('padTurretsLvl').textContent = padLevel('turrets') + '/4 built';
+    document.getElementById('padCalLvl').textContent = 'x' + launchpadTurretDmgMult().toFixed(1) + ' turret dmg';
+    const jl = padLevel('jets');
+    document.getElementById('padJetsLvl').textContent = jl === 0 ? 'No jets' : (jl + (jl>1?' jets':' jet') + ' / ' + (jl>=3?'30':'45') + 's runs');
+    document.getElementById('padShieldLvl').textContent = 'x' + launchpadShieldMult().toFixed(2) + ' shield cap/regen';
+    document.querySelectorAll('.cosmeticBuy').forEach(btn=>{
+      const key = btn.dataset.cosmetic;
+      if (state.cosmetics[key]){ btn.disabled = true; btn.textContent = 'Owned'; }
+      else { btn.disabled = state.gems < parseInt(btn.dataset.cost); }
+    });
+    document.querySelectorAll('.metaLvl').forEach(el=>{
+      el.textContent = 'x' + state.metaMult[el.dataset.key].toFixed(2);
+    });
+    document.querySelectorAll('.metaBuy').forEach(btn=>{
+      const key = btn.dataset.key;
+      const c = metaCost(key);
+      btn.innerHTML = `<span class="metaCost" data-key="${key}">${c}</span> gems`;
+      btn.disabled = state.gems < c;
+    });
+
+    const stats = computedStats();
+    const shieldPct = Math.max(0, Math.min(100, (state.hp.shield/stats.maxShield)*100));
+    document.getElementById('shieldBar').style.width = shieldPct + '%';
+    document.getElementById('superBar').style.width = (state.super.charge/state.super.max*100) + '%';
+    document.getElementById('superBtn').style.display = state.super.charge >= state.super.max ? 'block' : 'none';
+
+    document.querySelectorAll('.droneBuy').forEach(btn=>{
+      const key = btn.dataset.drone;
+      const owned = key === 'debuff' ? state.droneDebuff : state.droneAttack;
+      if (owned){ btn.disabled = true; btn.textContent = 'Equipped'; }
+      else { btn.disabled = state.coins < 80; btn.textContent = '80c'; }
+    });
+
+    applyTutorialButtonRestrictions();
+    maybeAutoSave();
+
+    const tierBonuses = {1:1.4, 2:1.8, 3:2.5};
+    const tierCosts = {1:50, 2:120, 3:300};
+    [1,2,3].forEach(tier=>{
+      const btn = document.querySelector(`[data-tier="${tier}"]`);
+      const row = document.getElementById('tierRow-'+tier);
+      if (!btn || !row) return;
+      const owned = state.turret.tierBonus >= tierBonuses[tier];
+      const prevOwned = tier === 1 || state.turret.tierBonus >= tierBonuses[tier-1];
+      if (owned){ btn.disabled = true; btn.textContent = 'Owned'; row.classList.add('lockedTier'); }
+      else if (prevOwned){ btn.disabled = false; btn.textContent = tierCosts[tier] + ' gems'; row.classList.remove('lockedTier'); }
+      else { btn.disabled = true; btn.textContent = tierCosts[tier] + ' gems'; row.classList.add('lockedTier'); }
+    });
+  }
+
+  // ---------- Init ----------
+  const foliage = [];
+  const groundDetail = [];
+  (function generateFoliage(){
+    for (let i=0;i<48;i++){
+      const angle = Math.random()*Math.PI*2;
+      const dist = 150 + Math.random()*750;
+      foliage.push({
+        dx: Math.cos(angle)*dist, dy: Math.sin(angle)*dist,
+        r: 22 + Math.random()*46,
+        shade: Math.random(),
+        seed: Math.random()*1000,
+      });
+    }
+    for (let i=0;i<70;i++){
+      const angle = Math.random()*Math.PI*2;
+      const dist = 90 + Math.random()*820;
+      groundDetail.push({
+        dx: Math.cos(angle)*dist, dy: Math.sin(angle)*dist,
+        seed: Math.random()*1000,
+        scale: 0.6 + Math.random()*0.8,
+      });
+    }
+  })();
+
+  setTimeout(()=>{
+    loadGame();
+    // Migration: saves made under the old rule (Earth required all four planets
+    // prestiged) get Earth unlocked silently if Planet IV is already secured.
+    if (!state.unlockedPlanets[4] && state.planetProgress[3] && state.planetProgress[3].completed){
+      state.unlockedPlanets[4] = true;
+      saveGame();
+    }
+    updateVibrateBtnUI();
+    updateSoundBtnUI();
+    resizeCanvas();
+    resizeShipPreview();
+    const stats = computedStats();
+    state.hp.maxShield = stats.maxShield; state.hp.shield = stats.maxShield; state.firstInit = true;
+    spawnWave();
+    updateUI();
+    requestAnimationFrame(loop);
+    requestAnimationFrame(renderShipPreview);
+  }, 50);
+
+  // The game is local-first: localStorage is the source of truth, cloud sync
+  // is a fire-and-forget bonus. This periodic autosave guarantees a recent
+  // local save even if the browser kills the tab without firing unload events.
+  setInterval(saveGame, 20000);
+  window.addEventListener('pagehide', saveGame);
+  window.addEventListener('beforeunload', saveGame);
+  document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState === 'hidden') saveGame(); });
+})();
+</script>
+</body>
+</html>
