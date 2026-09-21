@@ -3354,7 +3354,38 @@
   });
 
   document.getElementById('claimDaily').onclick = claimDaily;
-  document.getElementById('adGems').onclick = (e)=>{ state.gems += 5; updateUI(); };
+  document.getElementById('adGems').onclick = function(){
+    // Reset daily count if it's a new day
+    let today = new Date().toDateString();
+    if (state.lastAdGemDay !== today) {
+      state.lastAdGemDay = today;
+      state.adGemsWatchedToday = 0;
+    }
+    
+    // Check daily limit (5 per day)
+    if (state.adGemsWatchedToday >= 5) {
+      showToast('❌ Daily limit reached (5/day)');
+      this.disabled = true;
+      return;
+    }
+    
+    // Disable button during ad
+    this.disabled = true;
+    let self = this;
+    
+    withRewardedAd(function(){ 
+      state.gems += 5; 
+      state.adGemsWatchedToday += 1;
+      updateUI(); 
+      self.disabled = false;
+      
+      if (state.adGemsWatchedToday < 5) {
+        showToast(`📺 Ads watched: ${state.adGemsWatchedToday}/5 today`);
+      } else {
+        showToast('✅ Daily limit reached (5/day)');
+      }
+    });
+  };
   document.getElementById('superBtn').onclick = ()=>{
     unleashSuper();
     if (state.tutorial.active && tutorialSteps[state.tutorial.step].id === 'forceSuperDischarge' && !state.tutorial.superDischarged){
