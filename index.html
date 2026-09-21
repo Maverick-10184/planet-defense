@@ -371,10 +371,10 @@
 
   <!-- ============ UPGRADES ============ -->
   <div class="screen" id="screen-upgrades">
-    <div class="topBar">
+        <div class="topBar">
       <div class="stat coin">🪙 <span class="coinCount">0</span></div>
-      <div class="stat gem">💎 <span class="gemCount">0</span></div>
-      <div class="stat prestige">🔁 <span class="prestigeCount">0</span></div>
+      <div class="stat gem">💎 <span class="gemCount">0</span> 🔁 <span class="prestigeCount">0</span></div>
+      <div class="stat version"><span class="versionNumber">v1.1</span></div>
     </div>
     <div class="scroll">
       <h1>Upgrades</h1>
@@ -412,10 +412,10 @@
 
   <!-- ============ PLANETS ============ -->
   <div class="screen" id="screen-planets">
-    <div class="topBar">
+        <div class="topBar">
       <div class="stat coin">🪙 <span class="coinCount">0</span></div>
-      <div class="stat gem">💎 <span class="gemCount">0</span></div>
-      <div class="stat prestige">🔁 <span class="prestigeCount">0</span></div>
+      <div class="stat gem">💎 <span class="gemCount">0</span> 🔁 <span class="prestigeCount">0</span></div>
+      <div class="stat version"><span class="versionNumber">v1.1</span></div>
     </div>
     <div class="scroll">
       <h1>Star Chart</h1>
@@ -426,10 +426,10 @@
 
   <!-- ============ STORE ============ -->
   <div class="screen" id="screen-store">
-    <div class="topBar">
+        <div class="topBar">
       <div class="stat coin">🪙 <span class="coinCount">0</span></div>
-      <div class="stat gem">💎 <span class="gemCount">0</span></div>
-      <div class="stat prestige">🔁 <span class="prestigeCount">0</span></div>
+      <div class="stat gem">💎 <span class="gemCount">0</span> 🔁 <span class="prestigeCount">0</span></div>
+      <div class="stat version"><span class="versionNumber">v1.1</span></div>
     </div>
     <div class="scroll">
       <h1>Off-Planet Store</h1>
@@ -496,10 +496,10 @@
 
   <!-- ============ DRONES ============ -->
   <div class="screen" id="screen-drones">
-    <div class="topBar">
+        <div class="topBar">
       <div class="stat coin">🪙 <span class="coinCount">0</span></div>
-      <div class="stat gem">💎 <span class="gemCount">0</span></div>
-      <div class="stat prestige">🔁 <span class="prestigeCount">0</span></div>
+      <div class="stat gem">💎 <span class="gemCount">0</span> 🔁 <span class="prestigeCount">0</span></div>
+      <div class="stat version"><span class="versionNumber">v1.1</span></div>
     </div>
     <div class="scroll">
       <h1>Companion Drones</h1>
@@ -1165,7 +1165,10 @@
     ship: { shieldCapLvl:0, shieldRegenLvl:0 },
     super: { charge:0, max:100 },
     padRepair: 0, padTurrets: 0, padCalibration: 0, padJets: 0, padShield: 0,
-    adTickets: 0, earthVictoryClaimed: false,
+    adTickets: 0,
+  adGemsWatchedToday: 0,
+  lastAdGemDay: null,
+  versionNumber: 'v1.1',  // Update this when you release earthVictoryClaimed: false,
     jetRuns: [], nextJetAt: 0, cornerLastFire: [0,0,0,0],
     padIntro: false, earthPadIntroDone: false,
     hp: { shield:0, maxShield:0 },
@@ -3355,7 +3358,7 @@
   });
 
   document.getElementById('claimDaily').onclick = claimDaily;
-  document.getElementById('adGems').onclick = ()=>{ withRewardedAd(()=>{ state.gems += 5; updateUI(); }); };
+  document.getElementById('adGems').onclick = (e)=>{ state.gems += 5; updateUI(); };
   document.getElementById('superBtn').onclick = ()=>{
     unleashSuper();
     if (state.tutorial.active && tutorialSteps[state.tutorial.step].id === 'forceSuperDischarge' && !state.tutorial.superDischarged){
