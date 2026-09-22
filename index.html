@@ -3786,6 +3786,173 @@
   // Hook into gem changes
   setInterval(updateGemStoreAffordability, 100);
 
+
+  // ============================================
+  // CLICK HANDLERS FOR ALL BUTTONS
+  // ============================================
+  
+  document.addEventListener('click', (e) => {
+    // DRONE BUY BUTTONS
+    if (e.target.classList.contains('droneBuy')) {
+      const droneType = e.target.getAttribute('data-drone');
+      const cost = 80; // Drone cost in coins
+      
+      if (state.coins >= cost) {
+        state.coins -= cost;
+        
+        // Add to equipped drones (max 2)
+        if (!state.equippedDrones) state.equippedDrones = ['attack', 'debuff'];
+        
+        // Replace second slot or add
+        state.equippedDrones[1] = droneType;
+        
+        // Update UI
+        document.querySelectorAll('[data-drone]').forEach(btn => {
+          if (btn.getAttribute('data-drone') === droneType) {
+            btn.textContent = 'Equipped';
+            btn.disabled = true;
+          }
+        });
+        
+        showToast(`${droneType} Drone equipped!`);
+      } else {
+        showToast('Not enough coins!');
+      }
+      return;
+    }
+    
+    // DRONE UPGRADE BUTTONS
+    if (e.target.classList.contains('droneUpgrade')) {
+      const droneType = e.target.getAttribute('data-drone');
+      const upgradeCost = 50; // Base cost
+      
+      if (state.coins >= upgradeCost) {
+        state.coins -= upgradeCost;
+        state.droneUpgrades = state.droneUpgrades || {};
+        state.droneUpgrades[droneType] = (state.droneUpgrades[droneType] || 0) + 1;
+        
+        showToast(`${droneType} upgraded to level ${state.droneUpgrades[droneType]}!`);
+      } else {
+        showToast('Not enough coins!');
+      }
+      return;
+    }
+    
+    // GEM STORE BUTTONS
+    if (e.target.hasAttribute('data-gems')) {
+      const gemCost = parseInt(e.target.getAttribute('data-gems'));
+      const gemsReward = parseInt(e.target.getAttribute('data-gem-reward') || gemCost);
+      
+      if (state.gems >= gemCost) {
+        state.gems -= gemCost;
+        state.gems += gemsReward;
+        showToast(`Purchased ${gemsReward} gems!`);
+        updateGemAffordability();
+      } else {
+        showToast('Not enough gems!');
+      }
+      return;
+    }
+    
+    // UPGRADE BUTTONS (Range, Speed, Damage, etc)
+    if (e.target.classList.contains('upgradeBtn')) {
+      const upgrade = e.target.getAttribute('data-upgrade');
+      const cost = parseInt(e.target.getAttribute('data-cost') || 50);
+      
+      if (state.coins >= cost) {
+        state.coins -= cost;
+        state.upgrades = state.upgrades || {};
+        state.upgrades[upgrade] = (state.upgrades[upgrade] || 0) + 1;
+        
+        showToast(`${upgrade} upgraded!`);
+      } else {
+        showToast('Not enough coins!');
+      }
+      return;
+    }
+    
+    // TAB SWITCHING
+    if (e.target.classList.contains('tab')) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      
+      e.target.classList.add('active');
+      const tabName = e.target.getAttribute('data-tab');
+      document.getElementById(tabName)?.classList.add('active');
+      return;
+    }
+    
+    // PRESTIGE/RESET BUTTON
+    if (e.target.id === 'prestigeBtn') {
+      if (confirm('Reset everything and gain prestige? You will restart the game.')) {
+        state.prestige = (state.prestige || 0) + 1;
+        state.coins = 100;
+        state.gems = 0;
+        state.upgrades = {};
+        state.droneUpgrades = {};
+        state.equippedDrones = ['attack', 'debuff'];
+        showToast('Prestiged!');
+      }
+      return;
+    }
+    
+    // AD BUTTONS
+    if (e.target.id === 'adGemsBtn') {
+      showToast('Watch ad for gems (simulated)');
+      state.gems += 5;
+      e.target.disabled = true;
+      setTimeout(() => { e.target.disabled = false; }, 5000);
+      return;
+    }
+    
+    if (e.target.id === 'adCoinsBtn') {
+      showToast('Watch ad for 2x coins (simulated)');
+      state.coinMultiplier = 2;
+      setTimeout(() => { state.coinMultiplier = 1; }, 30000);
+      return;
+    }
+    
+    if (e.target.id === 'adReviveBtn') {
+      showToast('Watch ad to revive');
+      state.lives = (state.lives || 1) + 1;
+      return;
+    }
+  });
+  
+  // Update gem affordability
+  function updateGemAffordability() {
+    document.querySelectorAll('[data-gems]').forEach(btn => {
+      const cost = parseInt(btn.getAttribute('data-gems'));
+      if (state.gems >= cost) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      } else {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+      }
+    });
+  }
+  
+  // Toast notification
+  function showToast(msg) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      z-index: 9999;
+      font-size: 14px;
+    `;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+  }
+
 </script>
 </body>
 </html>
