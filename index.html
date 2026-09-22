@@ -535,6 +535,9 @@
         <div class="info"><span class="label">Debuff Drone</span><span class="sub">Slows nearby enemies</span></div>
         <button class="ghost droneBuy" data-drone="debuff">80c</button>
       </div>
+      <div class="row">
+        <div class="info"><span class="label">Attack Drone</span><span class="sub">Periodic bonus damage</span></div>
+        <button class="ghost droneBuy" data-drone="attack">80c</button>
       </div>
       <div class="row">
         <div class="info"><span class="label">Heal Drone</span><span class="sub">Regenerates shield</span></div>
@@ -543,10 +546,6 @@
       <div class="row">
         <div class="info"><span class="label">Fortify Drone</span><span class="sub">Increases shield capacity</span></div>
         <button class="ghost droneBuy" data-drone="fortify">200c</button>
-      </div>
-      <div class="row">
-        <div class="info"><span class="label">Attack Drone</span><span class="sub">Periodic bonus damage</span></div><span class="sub">Periodic bonus damage</span></div>
-        <button class="ghost droneBuy" data-drone="attack">80c</button>
       </div>
     </div>
   </div>
@@ -1217,15 +1216,6 @@
     dailyLogin: { streak:0, lastClaimDate:null },
     gameOverShown:false, firstInit:false,
   };
-
-// ===== DRONE TYPES =====
-const DRONE_TYPES = {
-  DEBUFF: 'debuff',
-  ATTACK: 'attack',
-  HEAL: 'heal',
-  FORTIFY: 'fortify'
-};
-
 
   const upgradeCfg = {
     fireRate:   { base:20, growth:1.18, owner:'turret', lvlKey:'fireRateLvl', maxLevel:20 },
