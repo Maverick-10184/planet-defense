@@ -513,6 +513,14 @@
         <div class="info"><span class="label">Attack Drone</span><span class="sub">Periodic bonus damage</span></div>
         <button class="ghost droneBuy" data-drone="attack">80c</button>
       </div>
+      <div class="row">
+        <div class="info"><span class="label">Heal Drone</span><span class="sub">Restores shields</span></div>
+        <button class="ghost droneBuy" data-drone="heal">80c</button>
+      </div>
+      <div class="row">
+        <div class="info"><span class="label">Fortify Drone</span><span class="sub">+Shield capacity</span></div>
+        <button class="ghost droneBuy" data-drone="fortify">80c</button>
+      </div>
     </div>
   </div>
 
@@ -3597,18 +3605,15 @@
   document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState === 'hidden') saveGame(); });
 })();
 
-
-  // ZOOM CONTROL - Ctrl+Scroll or pinch
+  // ZOOM CONTROL
   let zoomLevel = 1;
-  const gameContainer = document.getElementById('gameContainer') || document.body;
-  
   document.addEventListener('wheel', (e) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
       zoomLevel += (e.deltaY > 0 ? -0.1 : 0.1);
       zoomLevel = Math.max(0.5, Math.min(2.5, zoomLevel));
-      gameContainer.style.transform = `scale(${zoomLevel})`;
-      gameContainer.style.transformOrigin = 'top center';
+      document.body.style.transform = `scale(${zoomLevel})`;
+      document.body.style.transformOrigin = 'top center';
     }
   }, { passive: false });
   
@@ -3622,7 +3627,7 @@
         const scale = distance / lastDistance;
         zoomLevel *= scale;
         zoomLevel = Math.max(0.5, Math.min(2.5, zoomLevel));
-        gameContainer.style.transform = `scale(${zoomLevel})`;
+        document.body.style.transform = `scale(${zoomLevel})`;
       }
       lastDistance = distance;
     }
@@ -3630,32 +3635,20 @@
   
   document.addEventListener('touchend', () => { lastDistance = 0; });
 
-
-
+  // CHECK GEM AFFORDABILITY
   function checkGemAffordability() {
-    const gemButtons = document.querySelectorAll('[onclick*="buyGems"]');
-    gemButtons.forEach(btn => {
-      const text = btn.textContent;
-      const gemsRequired = parseInt(text.match(/\d+/)?.[0] || 0);
-      if (gemsRequired > state.gems) {
+    document.querySelectorAll('[data-cost]').forEach(btn => {
+      const cost = parseInt(btn.dataset.cost);
+      if (cost > state.gems) {
         btn.disabled = true;
         btn.style.opacity = '0.5';
-        btn.style.cursor = 'not-allowed';
       } else {
         btn.disabled = false;
         btn.style.opacity = '1';
-        btn.style.cursor = 'pointer';
       }
     });
   }
-  
-  // Call after gems change
-  const originalBuyGems = window.buyGems || function(){};
-  window.buyGems = function(amount) {
-    originalBuyGems(amount);
-    checkGemAffordability();
-  };
-
+  setInterval(checkGemAffordability, 500);
 </script>
 </body>
 </html>
