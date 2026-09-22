@@ -10,7 +10,7 @@
 ║   • Manual zoom control (Ctrl+Scroll, Pinch on mobile)      ║
 ║   • Drone upgrade button colors fixed                       ║
 ║                                                              ║
-║ v1.1                                                        ║
+║ v1.2                                                        ║
 ║   • Fixed ad gem button to use withRewardedAd()             ║
 ║   • Added 5/day limit to "Watch Ad for Gems"                ║
 ║   • Version display on home page only                       ║
@@ -537,6 +537,15 @@
       </div>
       <div class="row">
         <div class="info"><span class="label">Attack Drone</span><span class="sub">Periodic bonus damage</span></div>
+      <div class="row">
+        <div class="info"><span class="label">Heal Drone</span><span class="sub">Regenerates shield</span></div>
+        <button class="ghost droneBuy" data-drone="heal">80c</button>
+      </div>
+      <div class="row">
+        <div class="info"><span class="label">Fortify Drone</span><span class="sub">Increases shield cap</span></div>
+        <button class="ghost droneBuy" data-drone="fortify">80c</button>
+      </div>
+
         <button class="ghost droneBuy" data-drone="attack">80c</button>
       </div>
       <div class="row">
@@ -1216,7 +1225,8 @@
     tutorial: { active:false, done:false, step:0, superDischarged:false },
     dailyLogin: { streak:0, lastClaimDate:null },
     gameOverShown:false, firstInit:false,
-  };
+  ,
+  droneUpgrades: { attack: 0, debuff: 0, heal: 0, fortify: 0 }};
 
   const upgradeCfg = {
     fireRate:   { base:20, growth:1.18, owner:'turret', lvlKey:'fireRateLvl', maxLevel:20 },
@@ -3717,6 +3727,65 @@
     return div;
   }
 
+
+  // Zoom Control
+  let zoomLevel = 100;
+  document.addEventListener('wheel', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const canvas = document.getElementById('gameCanvas');
+      if (!canvas) return;
+      
+      const delta = e.deltaY > 0 ? -10 : 10;
+      zoomLevel = Math.max(50, Math.min(250, zoomLevel + delta));
+      
+      canvas.style.transform = `scale(${zoomLevel / 100})`;
+      canvas.style.transformOrigin = 'center center';
+    }
+  }, { passive: false });
+  
+  // Touch pinch zoom
+  let lastTouchDistance = 0;
+  document.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const distance = Math.sqrt(dx*dx + dy*dy);
+      
+      if (lastTouchDistance > 0) {
+        const delta = distance > lastTouchDistance ? 10 : -10;
+        zoomLevel = Math.max(50, Math.min(250, zoomLevel + delta));
+        const canvas = document.getElementById('gameCanvas');
+        if (canvas) {
+          canvas.style.transform = `scale(${zoomLevel / 100})`;
+          canvas.style.transformOrigin = 'center center';
+        }
+      }
+      lastTouchDistance = distance;
+    }
+  }, { passive: false });
+  
+  document.addEventListener('touchend', () => { lastTouchDistance = 0; });
+
+
+  // Gem store affordability
+  function updateGemStoreAffordability() {
+    const buttons = document.querySelectorAll('[data-gems]');
+    buttons.forEach(btn => {
+      const cost = parseInt(btn.getAttribute('data-gems'));
+      if (state.gems >= cost) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      } else {
+        btn.disabled = true;
+        btn.style.opacity = '0.4';
+      }
+    });
+  }
+  
+  // Hook into gem changes
+  setInterval(updateGemStoreAffordability, 100);
+
 </script>
 </body>
 </html>
@@ -3758,7 +3827,7 @@ function setGameZoom(newZoom) {
 // Current version - UPDATE THIS BEFORE EACH RELEASE
 const VERSION_HISTORY = {
   'v1.0': 'Initial release - Base game mechanics',
-  'v1.1': 'Fixed ad gem button routing, added daily ad limit, version display',
+  'v1.2': 'Fixed ad gem button routing, added daily ad limit, version display',
   'v1.2': 'Drone upgrades (2x multiplier), 2 new drones (4 total), affordability UX, zoom controls'
 };
 
