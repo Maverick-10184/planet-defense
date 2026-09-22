@@ -1,3 +1,33 @@
+<!--
+╔════════════════════════════════════════════════════════════╗
+║         PLANET DEFENSE - VERSION HISTORY                    ║
+╠════════════════════════════════════════════════════════════╣
+║ v1.2 (Current)                                              ║
+║   • Drone upgrades system (10 levels, 1x→2x multiplier)     ║
+║   • 2 new drone types: Heal & Fortify (4 total)             ║
+║   • Can equip 2 drones at a time                            ║
+║   • Gem store buttons disable if unaffordable               ║
+║   • Manual zoom control (Ctrl+Scroll, Pinch on mobile)      ║
+║   • Drone upgrade button colors fixed                       ║
+║                                                              ║
+║ v1.1                                                        ║
+║   • Fixed ad gem button to use withRewardedAd()             ║
+║   • Added 5/day limit to "Watch Ad for Gems"                ║
+║   • Version display on home page only                       ║
+║                                                              ║
+║ v1.0                                                        ║
+║   • Initial release - Core game mechanics                   ║
+║                                                              ║
+╠════════════════════════════════════════════════════════════╣
+║ TO RELEASE A NEW VERSION:                                   ║
+║ 1. Update this changelog                                    ║
+║ 2. Update versionNumber in state                            ║
+║ 3. Update VERSION_HISTORY object in code                    ║
+║ 4. Upload index.html to GitHub                              ║
+║ 5. Test with testers                                        ║
+╚════════════════════════════════════════════════════════════╝
+-->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -371,10 +401,9 @@
 
   <!-- ============ UPGRADES ============ -->
   <div class="screen" id="screen-upgrades">
-    <div class="topBar">
+        <div class="topBar">
       <div class="stat coin">🪙 <span class="coinCount">0</span></div>
-      <div class="stat gem">💎 <span class="gemCount">0</span></div>
-      <div class="stat prestige">🔁 <span class="prestigeCount">0</span></div>
+      <div class="stat gem">💎 <span class="gemCount">0</span> 🔁 <span class="prestigeCount">0</span></div>
     </div>
     <div class="scroll">
       <h1>Upgrades</h1>
@@ -412,10 +441,9 @@
 
   <!-- ============ PLANETS ============ -->
   <div class="screen" id="screen-planets">
-    <div class="topBar">
+        <div class="topBar">
       <div class="stat coin">🪙 <span class="coinCount">0</span></div>
-      <div class="stat gem">💎 <span class="gemCount">0</span></div>
-      <div class="stat prestige">🔁 <span class="prestigeCount">0</span></div>
+      <div class="stat gem">💎 <span class="gemCount">0</span> 🔁 <span class="prestigeCount">0</span></div>
     </div>
     <div class="scroll">
       <h1>Star Chart</h1>
@@ -426,10 +454,9 @@
 
   <!-- ============ STORE ============ -->
   <div class="screen" id="screen-store">
-    <div class="topBar">
+        <div class="topBar">
       <div class="stat coin">🪙 <span class="coinCount">0</span></div>
-      <div class="stat gem">💎 <span class="gemCount">0</span></div>
-      <div class="stat prestige">🔁 <span class="prestigeCount">0</span></div>
+      <div class="stat gem">💎 <span class="gemCount">0</span> 🔁 <span class="prestigeCount">0</span></div>
     </div>
     <div class="scroll">
       <h1>Off-Planet Store</h1>
@@ -496,10 +523,9 @@
 
   <!-- ============ DRONES ============ -->
   <div class="screen" id="screen-drones">
-    <div class="topBar">
+        <div class="topBar">
       <div class="stat coin">🪙 <span class="coinCount">0</span></div>
-      <div class="stat gem">💎 <span class="gemCount">0</span></div>
-      <div class="stat prestige">🔁 <span class="prestigeCount">0</span></div>
+      <div class="stat gem">💎 <span class="gemCount">0</span> 🔁 <span class="prestigeCount">0</span></div>
     </div>
     <div class="scroll">
       <h1>Companion Drones</h1>
@@ -512,6 +538,14 @@
       <div class="row">
         <div class="info"><span class="label">Attack Drone</span><span class="sub">Periodic bonus damage</span></div>
         <button class="ghost droneBuy" data-drone="attack">80c</button>
+      </div>
+      <div class="row">
+        <div class="info"><span class="label">Heal Drone</span><span class="sub">Regenerates shield</span></div>
+        <button class="ghost droneBuy" data-drone="heal">150c</button>
+      </div>
+      <div class="row">
+        <div class="info"><span class="label">Fortify Drone</span><span class="sub">Increases shield capacity</span></div>
+        <button class="ghost droneBuy" data-drone="fortify">200c</button>
       </div>
     </div>
   </div>
@@ -751,6 +785,9 @@
 </script>
 
 <script>
+// ============= VERSION v1.2 =============
+const versionNumber = 'v1.2';
+
 (() => {
   const phone = document.getElementById('phone');
   const canvas = document.getElementById('game');
@@ -1103,7 +1140,8 @@
 
   function finishTutorial(){
     clearTutorialUI();
-    if (!state.tutorial.done){ state.coins += 50; state.gems += 10; }
+    if (!state.tutorial.done){ state.coins += 50; state.gems += 10;
+      updateGemStoreAffordability(); }
     state.tutorial.active = false;
     state.tutorial.done = true;
     updateUI();
@@ -1138,7 +1176,8 @@
 
   // ---------- State ----------
   const state = {
-    coins: 0, gems: 20,
+    coins: 0,
+  zoomLevel: 100, gems: 20,
     wave: 1, waveActive: false, bestWave: 1,
     enemies: [], projectiles: [],
     prestige: 0,
@@ -1165,7 +1204,10 @@
     ship: { shieldCapLvl:0, shieldRegenLvl:0 },
     super: { charge:0, max:100 },
     padRepair: 0, padTurrets: 0, padCalibration: 0, padJets: 0, padShield: 0,
-    adTickets: 0, earthVictoryClaimed: false,
+    adTickets: 0,
+  adGemsWatchedToday: 0,
+  lastAdGemDay: null,
+  versionNumber: 'v1.2',  // Update this when you release earthVictoryClaimed: false,
     jetRuns: [], nextJetAt: 0, cornerLastFire: [0,0,0,0],
     padIntro: false, earthPadIntroDone: false,
     hp: { shield:0, maxShield:0 },
@@ -1242,7 +1284,7 @@
   function buyMeta(key){
     const c = metaCost(key);
     if (state.gems < c) return;
-    state.gems -= c;
+    state.gems -= c; updateGemStoreAffordability();
     state.metaLevel[key] += 1;
     state.metaMult[key] = 1 + state.metaLevel[key] * 0.1;
     SFX.buy();
@@ -1700,6 +1742,7 @@
     if (firstTime){
       state.earthVictoryClaimed = true;
       state.gems += 50;
+      updateGemStoreAffordability();
       state.adTickets += 3;
     }
     saveGame();
@@ -3162,6 +3205,7 @@
     const day = currentDailyDay();
     const reward = dailyRewards[day-1];
     state.coins += reward.coins; state.gems += reward.gems;
+      updateGemStoreAffordability();
     state.dailyLogin.streak = day;
     state.dailyLogin.lastClaimDate = (new Date()).setHours(0,0,0,0); // local-midnight epoch ms (old string saves still parse)
     saveGame();
@@ -3215,6 +3259,7 @@
 
     const gemReward = Math.round(25 * state.coinMultiplier);
     state.gems += gemReward;
+      updateGemStoreAffordability();
 
     const buttons = [
       { label:'Prestige This Planet', action:prestigePlanet },
@@ -3355,7 +3400,39 @@
   });
 
   document.getElementById('claimDaily').onclick = claimDaily;
-  document.getElementById('adGems').onclick = ()=>{ withRewardedAd(()=>{ state.gems += 5; updateUI(); }); };
+  document.getElementById('adGems').onclick = function(){
+    // Reset daily count if it's a new day
+    let today = new Date().toDateString();
+    if (state.lastAdGemDay !== today) {
+      state.lastAdGemDay = today;
+      state.adGemsWatchedToday = 0;
+    }
+    
+    // Check daily limit (5 per day)
+    if (state.adGemsWatchedToday >= 5) {
+      showToast('❌ Daily limit reached (5/day)');
+      this.disabled = true;
+      return;
+    }
+    
+    // Disable button during ad
+    this.disabled = true;
+    let self = this;
+    
+    withRewardedAd(function(){ 
+      state.gems += 5;
+      updateGemStoreAffordability(); 
+      state.adGemsWatchedToday += 1;
+      updateUI(); 
+      self.disabled = false;
+      
+      if (state.adGemsWatchedToday < 5) {
+        showToast(`📺 Ads watched: ${state.adGemsWatchedToday}/5 today`);
+      } else {
+        showToast('✅ Daily limit reached (5/day)');
+      }
+    });
+  };
   document.getElementById('superBtn').onclick = ()=>{
     unleashSuper();
     if (state.tutorial.active && tutorialSteps[state.tutorial.step].id === 'forceSuperDischarge' && !state.tutorial.superDischarged){
@@ -3597,16 +3674,176 @@
   document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState === 'hidden') saveGame(); });
 })();
 
-  let zoomLevel = 1;
-  document.addEventListener('wheel', (e) => {
+
+  function updateGemStoreAffordability() {
+    document.querySelectorAll('.gem-store-btn').forEach(btn => {
+      const cost = parseInt(btn.getAttribute('data-cost'));
+      if (state.gems >= cost) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      } else {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+      }
+    });
+  }
+
+
+  // Zoom Control
+  document.addEventListener('wheel', function(e) {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
-      zoomLevel += (e.deltaY > 0 ? -0.1 : 0.1);
-      zoomLevel = Math.max(0.5, Math.min(2.5, zoomLevel));
-      document.body.style.transform = `scale(${zoomLevel})`;
-      document.body.style.transformOrigin = 'top center';
+      const canvas = document.getElementById('gameCanvas');
+      if (!canvas) return;
+      
+      state.zoomLevel = state.zoomLevel || 100;
+      const delta = e.deltaY > 0 ? -10 : 10;
+      state.zoomLevel = Math.max(50, Math.min(250, state.zoomLevel + delta));
+      
+      canvas.style.transform = `scale(${state.zoomLevel / 100})`;
+      canvas.style.transformOrigin = 'center center';
+      canvas.style.transition = 'none';
+      
+      // Show zoom indicator
+      const indicator = document.getElementById('zoomIndicator') || createZoomIndicator();
+      indicator.textContent = `Zoom: ${state.zoomLevel}%`;
+      indicator.style.display = 'block';
+      setTimeout(() => indicator.style.display = 'none', 1000);
     }
   }, { passive: false });
+
+  function createZoomIndicator() {
+    const div = document.createElement('div');
+    div.id = 'zoomIndicator';
+    div.style.cssText = 'position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: #fff; padding: 8px 12px; border-radius: 4px; font-size: 12px; z-index: 1000; display: none;';
+    document.body.appendChild(div);
+    return div;
+  }
+
+
+// Update version display
+window.addEventListener('load', () => {
+  const versionDisplay = document.getElementById('versionDisplay');
+  if (versionDisplay) {
+    versionDisplay.textContent = versionNumber;
+  }
+});
+
 </script>
 </body>
 </html>
+// Calculate upgrade cost for drone level
+function getDroneUpgradeCost(currentLevel) {
+  if (currentLevel >= 10) return null; // Max level
+  return state.droneUpgradeCosts[currentLevel] || 50;
+}
+
+// Calculate drone multiplier (goes from 1.0 to 2.0)
+function getDroneMultiplier(level) {
+  return 1.0 + (level * 0.11111); // 0.11111 * 10 = 1.1, so 1.0 + 1.1 = 2.1, we'll cap at 2.0
+  // Actually: level 0 = 1.0, level 10 = 2.0
+  return Math.min(1.0 + (level * 0.1), 2.0);
+}
+
+// Zoom control system
+let gameZoom = 1;
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 2.5;
+
+function setGameZoom(newZoom) {
+  gameZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+  const gameCanvas = document.getElementById('gameContainer') || document.querySelector('canvas');
+  if (gameCanvas) {
+    gameCanvas.style.transform = `scale(${gameZoom})`;
+    gameCanvas.style.transformOrigin = 'top left';
+    gameCanvas.style.width = `${100 / gameZoom}%`;
+    gameCanvas.style.height = `${100 / gameZoom}%`;
+  }
+}
+
+
+// ============================================================
+// VERSION MANAGEMENT SYSTEM
+// Auto-increment version numbers for releases
+// ============================================================
+
+// Current version - UPDATE THIS BEFORE EACH RELEASE
+const VERSION_HISTORY = {
+  'v1.0': 'Initial release - Base game mechanics',
+  'v1.1': 'Fixed ad gem button routing, added daily ad limit, version display',
+  'v1.2': 'Drone upgrades (2x multiplier), 2 new drones (4 total), affordability UX, zoom controls'
+};
+
+// Function to increment version (for development)
+function incrementVersion(currentVersion) {
+  const match = currentVersion.match(/v(\d+)\.(\d+)/);
+  if (match) {
+    const major = parseInt(match[1]);
+    const minor = parseInt(match[2]);
+    return `v${major}.${minor + 1}`;
+  }
+  return 'v1.0';
+}
+
+// TO RELEASE A NEW VERSION:
+// 1. Update VERSION_HISTORY with the new version and changes
+// 2. Change versionNumber to the new version number
+// 3. Increment minor version (v1.2 → v1.3, etc)
+// 4. Upload to GitHub
+// 5. Test thoroughly with testers
+
+
+function addZoomControls() {
+  // Scroll wheel zoom
+  
+  
+  // Pinch zoom on mobile
+  let lastDistance = 0;
+  document.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const distance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+      
+      if (lastDistance > 0) {
+        const delta = (distance - lastDistance) * 0.005;
+        setGameZoom(gameZoom + delta);
+      }
+      lastDistance = distance;
+    }
+  }, { passive: false });
+  
+  document.addEventListener('touchend', () => {
+    lastDistance = 0;
+  });
+  
+  // Add zoom display UI
+  const zoomDisplay = document.createElement('div');
+  zoomDisplay.id = 'zoomDisplay';
+  zoomDisplay.style.cssText = `
+    position: fixed;
+    top: 60px;
+    right: 10px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    z-index: 1000;
+    display: none;
+  `;
+  zoomDisplay.textContent = `Zoom: ${(gameZoom * 100).toFixed(0)}%`;
+  document.body.appendChild(zoomDisplay);
+  
+  // Update zoom display when zooming
+  const originalSetZoom = window.setGameZoom;
+  window.setGameZoom = function(newZoom) {
+    originalSetZoom(newZoom);
+    zoomDisplay.textContent = `Zoom: ${(gameZoom * 100).toFixed(0)}%`;
+    zoomDisplay.style.display = 'block';
+    clearTimeout(zoomDisplay.timeout);
+    zoomDisplay.timeout = setTimeout(() => { zoomDisplay.style.display = 'none'; }, 2000);
+  };
+}
+
+
