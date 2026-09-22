@@ -1137,7 +1137,8 @@
 
   function finishTutorial(){
     clearTutorialUI();
-    if (!state.tutorial.done){ state.coins += 50; state.gems += 10; }
+    if (!state.tutorial.done){ state.coins += 50; state.gems += 10;
+      updateGemStoreAffordability(); }
     state.tutorial.active = false;
     state.tutorial.done = true;
     updateUI();
@@ -1738,6 +1739,7 @@
     if (firstTime){
       state.earthVictoryClaimed = true;
       state.gems += 50;
+      updateGemStoreAffordability();
       state.adTickets += 3;
     }
     saveGame();
@@ -3200,6 +3202,7 @@
     const day = currentDailyDay();
     const reward = dailyRewards[day-1];
     state.coins += reward.coins; state.gems += reward.gems;
+      updateGemStoreAffordability();
     state.dailyLogin.streak = day;
     state.dailyLogin.lastClaimDate = (new Date()).setHours(0,0,0,0); // local-midnight epoch ms (old string saves still parse)
     saveGame();
@@ -3253,6 +3256,7 @@
 
     const gemReward = Math.round(25 * state.coinMultiplier);
     state.gems += gemReward;
+      updateGemStoreAffordability();
 
     const buttons = [
       { label:'Prestige This Planet', action:prestigePlanet },
@@ -3413,7 +3417,8 @@
     let self = this;
     
     withRewardedAd(function(){ 
-      state.gems += 5; 
+      state.gems += 5;
+      updateGemStoreAffordability(); 
       state.adGemsWatchedToday += 1;
       updateUI(); 
       self.disabled = false;
@@ -3746,11 +3751,15 @@ function incrementVersion(currentVersion) {
 
 function addZoomControls() {
   // Scroll wheel zoom
-  document.addEventListener('wheel', (e) => {
+  document.addEventListener('wheel', function(e) {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      setGameZoom(gameZoom + delta);
+      const canvas = document.getElementById('gameCanvas') || document.querySelector('canvas');
+      if (!canvas) return;
+      const delta = e.deltaY > 0 ? -10 : 10;
+      state.zoomLevel = Math.max(50, Math.min(250, (state.zoomLevel || 100) + delta));
+      canvas.style.transform = `scale(${state.zoomLevel / 100})`;
+      canvas.style.transformOrigin = 'center center';
     }
   }, { passive: false });
   
