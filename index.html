@@ -1164,13 +1164,13 @@
 
   // ---------- State ----------
   const state = {
-    coins: 0, gems: 20,
+    coins: 0,
+  zoomLevel: 100, gems: 20,
     wave: 1, waveActive: false, bestWave: 1,
     enemies: [], projectiles: [],
     prestige: 0,
     revivesUsed: 0, maxRevives: 5, freeRevivesPerDay: 2,
     reviveBudget: { date: null, used: [0,0,0,0,0] },
-  zoomLevel: 100,
     coinMultiplier: 1, enemyMultiplier: 1,
     doubleCoinsThisWave: false,
     droneDebuff: false, droneAttack: false,
@@ -3657,6 +3657,21 @@
   window.addEventListener('beforeunload', saveGame);
   document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState === 'hidden') saveGame(); });
 })();
+
+
+  function updateGemStoreAffordability() {
+    document.querySelectorAll('.gem-store-btn').forEach(btn => {
+      const cost = parseInt(btn.getAttribute('data-cost'));
+      if (state.gems >= cost) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      } else {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+      }
+    });
+  }
+
 </script>
 </body>
 </html>
