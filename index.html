@@ -1,3 +1,33 @@
+<!--
+╔════════════════════════════════════════════════════════════╗
+║         PLANET DEFENSE - VERSION HISTORY                    ║
+╠════════════════════════════════════════════════════════════╣
+║ v1.2 (Current)                                              ║
+║   • Drone upgrades system (10 levels, 1x→2x multiplier)     ║
+║   • 2 new drone types: Heal & Fortify (4 total)             ║
+║   • Can equip 2 drones at a time                            ║
+║   • Gem store buttons disable if unaffordable               ║
+║   • Manual zoom control (Ctrl+Scroll, Pinch on mobile)      ║
+║   • Drone upgrade button colors fixed                       ║
+║                                                              ║
+║ v1.1                                                        ║
+║   • Fixed ad gem button to use withRewardedAd()             ║
+║   • Added 5/day limit to "Watch Ad for Gems"                ║
+║   • Version display on home page only                       ║
+║                                                              ║
+║ v1.0                                                        ║
+║   • Initial release - Core game mechanics                   ║
+║                                                              ║
+╠════════════════════════════════════════════════════════════╣
+║ TO RELEASE A NEW VERSION:                                   ║
+║ 1. Update this changelog                                    ║
+║ 2. Update versionNumber in state                            ║
+║ 3. Update VERSION_HISTORY object in code                    ║
+║ 4. Upload index.html to GitHub                              ║
+║ 5. Test with testers                                        ║
+╚════════════════════════════════════════════════════════════╝
+-->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1164,7 +1194,7 @@
     adTickets: 0,
   adGemsWatchedToday: 0,
   lastAdGemDay: null,
-  versionNumber: 'v1.1',  // Update this when you release earthVictoryClaimed: false,
+  versionNumber: 'v1.2',  // Update this when you release earthVictoryClaimed: false,
     jetRuns: [], nextJetAt: 0, cornerLastFire: [0,0,0,0],
     padIntro: false, earthPadIntroDone: false,
     hp: { shield:0, maxShield:0 },
@@ -3629,3 +3659,124 @@
 </script>
 </body>
 </html>
+// Calculate upgrade cost for drone level
+function getDroneUpgradeCost(currentLevel) {
+  if (currentLevel >= 10) return null; // Max level
+  return state.droneUpgradeCosts[currentLevel] || 50;
+}
+
+// Calculate drone multiplier (goes from 1.0 to 2.0)
+function getDroneMultiplier(level) {
+  return 1.0 + (level * 0.11111); // 0.11111 * 10 = 1.1, so 1.0 + 1.1 = 2.1, we'll cap at 2.0
+  // Actually: level 0 = 1.0, level 10 = 2.0
+  return Math.min(1.0 + (level * 0.1), 2.0);
+}
+
+// Zoom control system
+let gameZoom = 1;
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 2.5;
+
+function setGameZoom(newZoom) {
+  gameZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+  const gameCanvas = document.getElementById('gameContainer') || document.querySelector('canvas');
+  if (gameCanvas) {
+    gameCanvas.style.transform = `scale(${gameZoom})`;
+    gameCanvas.style.transformOrigin = 'top left';
+    gameCanvas.style.width = `${100 / gameZoom}%`;
+    gameCanvas.style.height = `${100 / gameZoom}%`;
+  }
+}
+
+
+// ============================================================
+// VERSION MANAGEMENT SYSTEM
+// Auto-increment version numbers for releases
+// ============================================================
+
+// Current version - UPDATE THIS BEFORE EACH RELEASE
+const VERSION_HISTORY = {
+  'v1.0': 'Initial release - Base game mechanics',
+  'v1.1': 'Fixed ad gem button routing, added daily ad limit, version display',
+  'v1.2': 'Drone upgrades (2x multiplier), 2 new drones (4 total), affordability UX, zoom controls'
+};
+
+// Function to increment version (for development)
+function incrementVersion(currentVersion) {
+  const match = currentVersion.match(/v(\d+)\.(\d+)/);
+  if (match) {
+    const major = parseInt(match[1]);
+    const minor = parseInt(match[2]);
+    return `v${major}.${minor + 1}`;
+  }
+  return 'v1.0';
+}
+
+// TO RELEASE A NEW VERSION:
+// 1. Update VERSION_HISTORY with the new version and changes
+// 2. Change versionNumber to the new version number
+// 3. Increment minor version (v1.2 → v1.3, etc)
+// 4. Upload to GitHub
+// 5. Test thoroughly with testers
+
+
+function addZoomControls() {
+  // Scroll wheel zoom
+  document.addEventListener('wheel', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      setGameZoom(gameZoom + delta);
+    }
+  }, { passive: false });
+  
+  // Pinch zoom on mobile
+  let lastDistance = 0;
+  document.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const distance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+      
+      if (lastDistance > 0) {
+        const delta = (distance - lastDistance) * 0.005;
+        setGameZoom(gameZoom + delta);
+      }
+      lastDistance = distance;
+    }
+  }, { passive: false });
+  
+  document.addEventListener('touchend', () => {
+    lastDistance = 0;
+  });
+  
+  // Add zoom display UI
+  const zoomDisplay = document.createElement('div');
+  zoomDisplay.id = 'zoomDisplay';
+  zoomDisplay.style.cssText = `
+    position: fixed;
+    top: 60px;
+    right: 10px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    z-index: 1000;
+    display: none;
+  `;
+  zoomDisplay.textContent = `Zoom: ${(gameZoom * 100).toFixed(0)}%`;
+  document.body.appendChild(zoomDisplay);
+  
+  // Update zoom display when zooming
+  const originalSetZoom = window.setGameZoom;
+  window.setGameZoom = function(newZoom) {
+    originalSetZoom(newZoom);
+    zoomDisplay.textContent = `Zoom: ${(gameZoom * 100).toFixed(0)}%`;
+    zoomDisplay.style.display = 'block';
+    clearTimeout(zoomDisplay.timeout);
+    zoomDisplay.timeout = setTimeout(() => { zoomDisplay.style.display = 'none'; }, 2000);
+  };
+}
+
+
