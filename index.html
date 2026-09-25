@@ -3718,106 +3718,7 @@
   }
 
 
-// ===== DRONE SYSTEM V1.2 =====
-// Track selected drones for deployment
-let selectedDrones = {
-  debuff: false,
-  attack: true,
-  heal: false,
-  fortify: false
-};
-
-let droneLevels = {
-  debuff: 0,
-  attack: 0,
-  heal: 0,
-  fortify: 0
-};
-
-const droneCosts = {
-  debuff: 50,
-  attack: 50,
-  heal: 75,
-  fortify: 100
-};
-
-// Handle drone checkbox changes
-document.addEventListener('change', (e) => {
-  if (e.target.classList.contains('drone-checkbox')) {
-    const drone = e.target.dataset.drone;
-    selectedDrones[drone] = e.target.checked;
-    console.log(`Drone ${drone} selection: ${selectedDrones[drone]}`);
-  }
-});
-
-// Upgrade drone function
-function upgradeDrone(droneType) {
-  const cost = droneCosts[droneType];
-  
-  if (state.coins < cost) {
-    console.log(`Not enough coins to upgrade ${droneType}`);
-    return;
-  }
-  
-  state.coins -= cost;
-  droneLevels[droneType] += 1;
-  
-  console.log(`Upgraded ${droneType} to level ${droneLevels[droneType]}`);
-  
-  // Deploy the drone if it's checked
-  if (selectedDrones[droneType]) {
-    deployDrone(droneType);
-  }
-  
-  updateUI();
-  refreshDroneUpgrades();
-}
-
-// Deploy drone function
-function deployDrone(droneType) {
-  if (droneType === 'debuff') {
-    // Debuff drones are independent
-    state.equippedDrones = ['debuff'];
-    console.log('Deployed Debuff drone (independent)');
-  } else {
-    // Attack/Heal/Fortify can be combined
-    let toEquip = [];
-    if (selectedDrones.attack && droneLevels.attack > 0) toEquip.push('attack');
-    if (selectedDrones.heal && droneLevels.heal > 0) toEquip.push('heal');
-    if (selectedDrones.fortify && droneLevels.fortify > 0) toEquip.push('fortify');
-    
-    if (toEquip.length === 0 && selectedDrones.attack && droneLevels.attack > 0) {
-      toEquip = ['attack'];
-    }
-    
-    state.equippedDrones = toEquip;
-    console.log('Deployed drones:', toEquip);
-  }
-}
-
-// Refresh drone upgrade buttons
-function refreshDroneUpgrades() {
-  document.querySelectorAll('.droneUpgradeBtn').forEach(btn => {
-    const drone = btn.dataset.drone;
-    const level = droneLevels[drone];
-    const cost = droneCosts[drone];
-    const canAfford = state.coins >= cost;
-    
-    btn.style.display = level < 5 ? 'block' : 'none';
-    btn.disabled = !canAfford;
-    btn.textContent = `${drone.charAt(0).toUpperCase() + drone.slice(1)} Lvl ${level} → ${level + 1} (${cost}c)`;
-    btn.style.opacity = canAfford ? '1' : '0.5';
-  });
-}
-
-// Attach click handlers to drone upgrade buttons
-document.querySelectorAll('.droneUpgradeBtn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    upgradeDrone(btn.dataset.drone);
-  });
-});
-
-// Restore checkbox states on screen change
+ Restore checkbox states on screen change
 function updateDroneCheckboxes() {
   document.querySelectorAll('.drone-checkbox').forEach(checkbox => {
     const drone = checkbox.dataset.drone;
@@ -3868,6 +3769,116 @@ document.addEventListener('wheel', (e) => {
     }, 2000);
   }
 }, { passive: false });
+
+// ===== DRONE SYSTEM V1.2 - FIXED =====
+let selectedDrones = {
+  debuff: false,
+  attack: true,
+  heal: false,
+  fortify: false
+};
+
+let droneLevels = {
+  debuff: 0,
+  attack: 0,
+  heal: 0,
+  fortify: 0
+};
+
+const droneCosts = {
+  debuff: 50,
+  attack: 50,
+  heal: 75,
+  fortify: 100
+};
+
+// Save/load drone selections
+function saveDroneState() {
+  localStorage.setItem('selectedDrones', JSON.stringify(selectedDrones));
+  localStorage.setItem('droneLevels', JSON.stringify(droneLevels));
+}
+
+function loadDroneState() {
+  const saved = localStorage.getItem('selectedDrones');
+  const levels = localStorage.getItem('droneLevels');
+  if (saved) selectedDrones = JSON.parse(saved);
+  if (levels) droneLevels = JSON.parse(levels);
+}
+
+// Handle home screen drone checkboxes
+document.addEventListener('change', (e) => {
+  if (e.target.classList.contains('drone-checkbox')) {
+    const drone = e.target.dataset.drone;
+    selectedDrones[drone] = e.target.checked;
+    saveDroneState();
+    console.log(`Drone ${drone} selection: ${selectedDrones[drone]}`);
+  }
+});
+
+// Update home screen checkboxes when switching to drones tab
+function updateDroneCheckboxes() {
+  document.querySelectorAll('.drone-checkbox').forEach(checkbox => {
+    const drone = checkbox.dataset.drone;
+    checkbox.checked = selectedDrones[drone];
+  });
+}
+
+// Upgrade drone function
+function upgradeDrone(droneType) {
+  const cost = droneCosts[droneType];
+  
+  if (state.coins < cost) {
+    console.log(`Not enough coins to upgrade ${droneType}`);
+    return;
+  }
+  
+  state.coins -= cost;
+  droneLevels[droneType] += 1;
+  saveDroneState();
+  
+  console.log(`Upgraded ${droneType} to level ${droneLevels[droneType]}`);
+  
+  updateUI();
+  refreshDroneUpgrades();
+}
+
+// Refresh drone upgrade buttons in battle
+function refreshDroneUpgrades() {
+  const container = document.getElementById('droneUpgrades');
+  if (!container) return;
+  
+  // Always make sure container is visible
+  container.style.display = 'block';
+  
+  document.querySelectorAll('.droneUpgradeBtn').forEach(btn => {
+    const drone = btn.dataset.drone;
+    const level = droneLevels[drone];
+    const cost = droneCosts[drone];
+    const canAfford = state.coins >= cost;
+    
+    // Show button if drone hasn't reached max level
+    if (level < 5) {
+      btn.style.display = 'block';
+      btn.disabled = !canAfford;
+      btn.textContent = `${drone.charAt(0).toUpperCase() + drone.slice(1)} Lvl ${level} → ${level + 1} (${cost}c)`;
+      btn.style.opacity = canAfford ? '1' : '0.5';
+      btn.style.cursor = canAfford ? 'pointer' : 'not-allowed';
+    } else {
+      btn.style.display = 'none';
+    }
+  });
+}
+
+// Attach click handlers
+document.querySelectorAll('.droneUpgradeBtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    upgradeDrone(btn.dataset.drone);
+  });
+});
+
+// Load saved state on startup
+loadDroneState();
+refreshDroneUpgrades();
 
 </script>
 </body>
