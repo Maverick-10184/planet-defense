@@ -648,54 +648,34 @@
           <div id="drawerShipGroup">
             <h3>Ship</h3>
             <div class="row">
-              <div class="info"><span class="label">Shield Capacity</span><span class="sub upLvl" data-key="shieldCap">Lv 0</span></div>
+              <div class="info"><span class="label">Shield Capacity</span><span class="sub upLvl" data-key="shieldCap">Lv 0</span></div></div>
+
+        <!-- Drone upgrades drawer -->
+        <div id="drawerDroneGroup" style="display:none">
+          <h3>Companion Drones</h3>
+          <div class="row">
+            <div class="info"><span class="label">🔵 Debuff</span><span class="sub upLvl" data-key="droneDebuff">Lv 0</span></div>
+            <button class="upBuy" data-key="droneDebuff">↑ <span class="upCost" data-key="droneDebuff">50</span>c</button>
+          </div>
+          <div class="row">
+            <div class="info"><span class="label">🔴 Attack</span><span class="sub upLvl" data-key="droneAttack">Lv 0</span></div>
+            <button class="upBuy" data-key="droneAttack">↑ <span class="upCost" data-key="droneAttack">50</span>c</button>
+          </div>
+          <div class="row">
+            <div class="info"><span class="label">💚 Heal</span><span class="sub upLvl" data-key="droneHeal">Lv 0</span></div>
+            <button class="upBuy" data-key="droneHeal">↑ <span class="upCost" data-key="droneHeal">75</span>c</button>
+          </div>
+          <div class="row">
+            <div class="info"><span class="label">🟡 Fortify</span><span class="sub upLvl" data-key="droneFortify">Lv 0</span></div>
+            <button class="upBuy" data-key="droneFortify">↑ <span class="upCost" data-key="droneFortify">100</span>c</button>
+          </div>
+        </div>
+
+        
               <button class="upBuy" data-key="shieldCap">↑ <span class="upCost" data-key="shieldCap"></span>c</button>
             </div>
             <div class="row">
               <div class="info"><span class="label">Shield Regen</span><span class="sub upLvl" data-key="shieldRegen">Lv 0</span></div>
-        </div>
-
-        <!-- ============ DRONES DRAWER TAB ============ -->
-        <div id="drawerDronesGroup">
-          <h3>Companion Drones</h3>
-          
-          <div class="row">
-            <div class="info"><span class="label">🔵 Debuff Drone</span><span class="sub">Slows enemies</span></div>
-          </div>
-          <div class="row">
-            <div class="info"><span class="label upLvl" data-drone="debuff">Level 0</span></div>
-            <button class="upBuy droneBuyBtn" data-drone="debuff">↑ <span class="upCost" data-drone="debuff">50</span>c</button>
-          </div>
-          
-          <div class="row">
-            <div class="info"><span class="label">🔴 Attack Drone</span><span class="sub">Bonus damage</span></div>
-          </div>
-          <div class="row">
-            <div class="info"><span class="label upLvl" data-drone="attack">Level 0</span></div>
-            <button class="upBuy droneBuyBtn" data-drone="attack">↑ <span class="upCost" data-drone="attack">50</span>c</button>
-          </div>
-          
-          <div class="row">
-            <div class="info"><span class="label">💚 Heal Drone</span><span class="sub">Regenerates shield</span></div>
-          </div>
-          <div class="row">
-            <div class="info"><span class="label upLvl" data-drone="heal">Level 0</span></div>
-            <button class="upBuy droneBuyBtn" data-drone="heal">↑ <span class="upCost" data-drone="heal">75</span>c</button>
-          </div>
-          
-          <div class="row">
-            <div class="info"><span class="label">🟡 Fortify Drone</span><span class="sub">More shield</span></div>
-          </div>
-          <div class="row">
-            <div class="info"><span class="label upLvl" data-drone="fortify">Level 0</span></div>
-            <button class="upBuy droneBuyBtn" data-drone="fortify">↑ <span class="upCost" data-drone="fortify">100</span>c</button>
-          </div>
-
-          <div class="row" style="margin-top: 12px; background: rgba(100,150,255,0.15); border-radius: 4px; padding: 8px;">
-            <div class="info"><span class="label" style="font-size: 11px; color: #8ac;">💡 TIP: Select drones on the Home screen, upgrade them here during battle!</span></div>
-          </div>
-        </div>
-        <div id="drawerLaunchpadGroup"</div>
               <button class="upBuy" data-key="shieldRegen">↑ <span class="upCost" data-key="shieldRegen"></span>c</button>
             </div>
           </div>
@@ -3954,123 +3934,6 @@ window.updateUI = function() {
 };
 
 console.log('[DRONE] V1.2 system loaded');
-
-
-// ===== DRONE SYSTEM V1.2 - COMPLETE INTEGRATION =====
-
-let droneLevels = { debuff: 0, attack: 0, heal: 0, fortify: 0 };
-let selectedDrones = { debuff: false, attack: true, heal: false, fortify: false };
-
-const droneCosts = { debuff: 50, attack: 50, heal: 75, fortify: 100 };
-
-// Load saved drone state from localStorage
-function loadDroneState() {
-  const saved = localStorage.getItem('v12_droneLevels');
-  if (saved) {
-    droneLevels = JSON.parse(saved);
-    console.log('[DRONE] Loaded levels:', droneLevels);
-  }
-  
-  const savedSel = localStorage.getItem('v12_selectedDrones');
-  if (savedSel) {
-    selectedDrones = JSON.parse(savedSel);
-    console.log('[DRONE] Loaded selections:', selectedDrones);
-  }
-  
-  updateDroneHomeCheckboxes();
-}
-
-// Sync home screen checkboxes
-function updateDroneHomeCheckboxes() {
-  document.querySelectorAll('.drone-checkbox').forEach(cb => {
-    if (selectedDrones[cb.dataset.drone] !== undefined) {
-      cb.checked = selectedDrones[cb.dataset.drone];
-    }
-  });
-}
-
-// Update drawer display when tab is clicked
-function updateDroneDrawer() {
-  document.querySelectorAll('.droneBuyBtn').forEach(btn => {
-    const drone = btn.dataset.drone;
-    const level = droneLevels[drone] || 0;
-    const cost = droneCosts[drone];
-    const canAfford = state.coins >= cost;
-    const nextLevel = level + 1;
-    
-    // Update level display
-    const lvlDisplay = document.querySelector(`.upLvl[data-drone="${drone}"]`);
-    if (lvlDisplay) lvlDisplay.textContent = `Level ${level}`;
-    
-    // Update cost display
-    const costDisplay = document.querySelector(`.upCost[data-drone="${drone}"]`);
-    if (costDisplay) costDisplay.textContent = cost;
-    
-    // Enable/disable button
-    btn.disabled = !canAfford || level >= 10;
-    btn.style.opacity = (canAfford && !btn.disabled) ? '1' : '0.5';
-    btn.style.cursor = (!btn.disabled) ? 'pointer' : 'not-allowed';
-    
-    // Add click handler
-    btn.onclick = () => upgradeDroneFromDrawer(drone, cost);
-  });
-}
-
-function upgradeDroneFromDrawer(droneType, cost) {
-  if (state.coins < cost) {
-    console.log(`[DRONE] Not enough coins for ${droneType}`);
-    return;
-  }
-  
-  state.coins -= cost;
-  droneLevels[droneType] = (droneLevels[droneType] || 0) + 1;
-  
-  console.log(`[DRONE] Upgraded ${droneType} to level ${droneLevels[droneType]}`);
-  
-  // Save and refresh
-  localStorage.setItem('v12_droneLevels', JSON.stringify(droneLevels));
-  updateDroneDrawer();
-  updateUI();
-}
-
-// Hook into home screen checkboxes
-document.addEventListener('change', (e) => {
-  if (e.target.classList.contains('drone-checkbox')) {
-    const drone = e.target.dataset.drone;
-    selectedDrones[drone] = e.target.checked;
-    console.log(`[DRONE] ${drone} selected: ${selectedDrones[drone]}`);
-    localStorage.setItem('v12_selectedDrones', JSON.stringify(selectedDrones));
-  }
-});
-
-// Initialize drones on page load
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    loadDroneState();
-    
-    // Hook drawer tabs to update drones when clicked
-    const dronesTab = document.querySelector('[data-cat="drones"]');
-    if (dronesTab) {
-      dronesTab.addEventListener('click', () => {
-        setTimeout(updateDroneDrawer, 50);
-      });
-    }
-    
-    console.log('[DRONE] System initialized');
-  }, 500);
-});
-
-// Also update when drawer opens (intercept the drawer button)
-const origDrawerOpen = window.openDrawer || (() => {});
-window.openDrawer = function(category) {
-  if (category === 'drones') {
-    setTimeout(updateDroneDrawer, 100);
-  }
-  return origDrawerOpen.call(this, category);
-};
-
-console.log('[DRONE] V1.2 ready');
-
 </script>
 </body>
 </html>
