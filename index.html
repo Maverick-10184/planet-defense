@@ -521,31 +521,38 @@
     </div>
   </div>
 
-  <!-- ============ DRONES ============ -->
+    <!-- ============ DRONES ============ -->
   <div class="screen" id="screen-drones">
     <div class="topBar">
       <div class="stat coin">🪙 <span class="coinCount">0</span></div>
       <div class="stat gem">💎 <span class="gemCount">0</span> 🔁 <span class="prestigeCount">0</span></div>
     </div>
     <div class="scroll">
-      <h1>Companion Drones</h1>
-      <p class="sub">Select which drones to deploy when levelled in battle.</p>
+      <h1>Companion Drones v1.2</h1>
+      <p class="sub">Select which drones to deploy in battle. Upgrade them during combat.</p>
 
-      <div class="row" style="align-items: center; justify-content: space-between; padding: 10px 0;">
-        <div class="info"><span class="label">Debuff Drone</span><span class="sub">Slows nearby enemies</span></div>
-        <input type="checkbox" id="checkbox-debuff" class="drone-checkbox" data-drone="debuff" style="width: 24px; height: 24px; cursor: pointer;">
+      <div class="row" style="align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #444;">
+        <div class="info"><span class="label">🔵 Debuff Drone</span><span class="sub">Slows nearby enemies</span></div>
+        <input type="checkbox" class="drone-checkbox" data-drone="debuff" style="width: 24px; height: 24px; cursor: pointer;">
+      </div>
+      <div class="row" style="align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #444;">
+        <div class="info"><span class="label">🔴 Attack Drone</span><span class="sub">Periodic bonus damage</span></div>
+        <input type="checkbox" class="drone-checkbox" data-drone="attack" checked style="width: 24px; height: 24px; cursor: pointer;">
+      </div>
+      <div class="row" style="align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #444;">
+        <div class="info"><span class="label">💚 Heal Drone</span><span class="sub">Regenerates shield</span></div>
+        <input type="checkbox" class="drone-checkbox" data-drone="heal" style="width: 24px; height: 24px; cursor: pointer;">
       </div>
       <div class="row" style="align-items: center; justify-content: space-between; padding: 10px 0;">
-        <div class="info"><span class="label">Attack Drone</span><span class="sub">Periodic bonus damage</span></div>
-        <input type="checkbox" id="checkbox-attack" class="drone-checkbox" data-drone="attack" checked style="width: 24px; height: 24px; cursor: pointer;">
+        <div class="info"><span class="label">🟡 Fortify Drone</span><span class="sub">Increases shield capacity</span></div>
+        <input type="checkbox" class="drone-checkbox" data-drone="fortify" style="width: 24px; height: 24px; cursor: pointer;">
       </div>
-      <div class="row" style="align-items: center; justify-content: space-between; padding: 10px 0;">
-        <div class="info"><span class="label">Heal Drone</span><span class="sub">Regenerates shield</span></div>
-        <input type="checkbox" id="checkbox-heal" class="drone-checkbox" data-drone="heal" style="width: 24px; height: 24px; cursor: pointer;">
-      </div>
-      <div class="row" style="align-items: center; justify-content: space-between; padding: 10px 0;">
-        <div class="info"><span class="label">Fortify Drone</span><span class="sub">Increases shield capacity</span></div>
-        <input type="checkbox" id="checkbox-fortify" class="drone-checkbox" data-drone="fortify" style="width: 24px; height: 24px; cursor: pointer;">
+      
+      <div style="margin-top: 20px; padding: 10px; background: rgba(100, 100, 255, 0.1); border-radius: 5px;">
+        <p style="font-size: 12px; color: #aaa;"><strong>How it works:</strong></p>
+        <p style="font-size: 12px; color: #aaa;">1. Check which drones you want</p>
+        <p style="font-size: 12px; color: #aaa;">2. During battle, click "Upgrade" to level them up</p>
+        <p style="font-size: 12px; color: #aaa;">3. Once leveled, selected drones deploy automatically</p>
       </div>
     </div>
   </div>
@@ -568,17 +575,6 @@
       <div id="sideBars">
         <div>
           <div class="lbl">Shield</div>
-  <!-- DRONE UPGRADES SECTION V1.2 -->
-  <div id="droneUpgradesSection" style="display: none; margin-top: 20px; padding: 15px; background: rgba(100, 200, 100, 0.2); border: 2px solid #64C864; border-radius: 8px;">
-    <h3 style="color: #64C864; margin-top: 0;">⚙️ Drone Upgrades</h3>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
-      <button onclick="upgradeDrone('debuff')" style="padding: 10px; background: #FF6B6B; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;"><div>Debuff Lv<span id="dL">0</span></div><div style="font-size:11px">50c→<span id="dC">50</span>c</div></button>
-      <button onclick="upgradeDrone('attack')" style="padding: 10px; background: #FF0000; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;"><div>Attack Lv<span id="aL">0</span></div><div style="font-size:11px">50c→<span id="aC">50</span>c</div></button>
-      <button onclick="upgradeDrone('heal')" style="padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;"><div>Heal Lv<span id="hL">0</span></div><div style="font-size:11px">75c→<span id="hC">75</span>c</div></button>
-      <button onclick="upgradeDrone('fortify')" style="padding: 10px; background: #FFA500; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;"><div>Fortify Lv<span id="fL">0</span></div><div style="font-size:11px">100c→<span id="fC">100</span>c</div></button>
-    </div>
-  </div>
-
           <div class="bar-outer"><div class="bar-inner" id="shieldBar" style="background:var(--accent); width:100%"></div></div>
         </div>
         <div id="superChargeWrap">
@@ -3729,59 +3725,7 @@
   }
 
 
-// Restore checkbox states on screen change
-function updateDroneCheckboxes() {
-  document.querySelectorAll('.drone-checkbox').forEach(checkbox => {
-    const drone = checkbox.dataset.drone;
-    checkbox.checked = selectedDrones[drone];
-  });
-}
-
-// Update checkboxes whenever we switch to drones tab
-const origShowScreen = window.showScreen || function() {};
-window.showScreen = function(screenId) {
-  if (screenId === 'drones') {
-    updateDroneCheckboxes();
-  }
-  if (origShowScreen) origShowScreen(screenId);
-};
-
-// ===== ZOOM CONTROL V1.2 =====
-let currentZoom = 1.0;
-let zoomTimeout;
-
-document.addEventListener('wheel', (e) => {
-  if (e.ctrlKey) {
-    e.preventDefault();
-    
-    const zoomSpeed = 0.1;
-    currentZoom += (e.deltaY > 0 ? -zoomSpeed : zoomSpeed);
-    currentZoom = Math.max(0.5, Math.min(2.5, currentZoom));
-    
-    // Apply zoom
-    document.body.style.transform = `scale(${currentZoom})`;
-    document.body.style.transformOrigin = '0 0';
-    document.body.style.width = (100 / currentZoom) + '%';
-    document.body.style.height = (100 / currentZoom) + '%';
-    
-    // Show zoom percentage
-    let zoomDisplay = document.getElementById('zoomDisplay');
-    if (!zoomDisplay) {
-      zoomDisplay = document.createElement('div');
-      zoomDisplay.id = 'zoomDisplay';
-      zoomDisplay.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: #fff; padding: 10px 20px; border-radius: 5px; z-index: 9999; font-size: 16px;';
-      document.body.appendChild(zoomDisplay);
-    }
-    zoomDisplay.textContent = `Zoom: ${Math.round(currentZoom * 100)}%`;
-    
-    clearTimeout(zoomTimeout);
-    zoomTimeout = setTimeout(() => {
-      if (zoomDisplay) zoomDisplay.remove();
-    }, 2000);
-  }
-}, { passive: false });
-
-// ===== DRONE SYSTEM V1.2 - FIXED =====
+// ===== DRONE SYSTEM V1.2 - INTEGRATED =====
 let selectedDrones = {
   debuff: false,
   attack: true,
@@ -3803,120 +3747,171 @@ const droneCosts = {
   fortify: 100
 };
 
-// Save/load drone selections
-function saveDroneState() {
-  localStorage.setItem('selectedDrones', JSON.stringify(selectedDrones));
-  localStorage.setItem('droneLevels', JSON.stringify(droneLevels));
-}
+// Store original state functions if they exist
+const originalUpdateUI = window.updateUI || function() {};
 
-function loadDroneState() {
-  const saved = localStorage.getItem('selectedDrones');
-  const levels = localStorage.getItem('droneLevels');
-  if (saved) selectedDrones = JSON.parse(saved);
-  if (levels) droneLevels = JSON.parse(levels);
-}
-
-// Handle home screen drone checkboxes
+// Handle drone checkbox changes from home screen
 document.addEventListener('change', (e) => {
   if (e.target.classList.contains('drone-checkbox')) {
     const drone = e.target.dataset.drone;
     selectedDrones[drone] = e.target.checked;
-    saveDroneState();
-    console.log(`Drone ${drone} selection: ${selectedDrones[drone]}`);
+    console.log(`[DRONE] ${drone} selection toggled to: ${selectedDrones[drone]}`);
+    localStorage.setItem('droneLevels', JSON.stringify(droneLevels));
+    localStorage.setItem('selectedDrones', JSON.stringify(selectedDrones));
   }
 });
 
-// Update home screen checkboxes when switching to drones tab
-function updateDroneCheckboxes() {
-  document.querySelectorAll('.drone-checkbox').forEach(checkbox => {
-    const drone = checkbox.dataset.drone;
-    checkbox.checked = selectedDrones[drone];
-  });
-}
-
-// Upgrade drone function
+// Main function to upgrade and deploy drones
 function upgradeDrone(droneType) {
   const cost = droneCosts[droneType];
   
   if (state.coins < cost) {
-    console.log(`Not enough coins to upgrade ${droneType}`);
+    console.log(`[DRONE] Not enough coins for ${droneType} (need ${cost}, have ${state.coins})`);
     return;
   }
   
   state.coins -= cost;
   droneLevels[droneType] += 1;
-  saveDroneState();
   
-  console.log(`Upgraded ${droneType} to level ${droneLevels[droneType]}`);
+  console.log(`[DRONE] Upgraded ${droneType} to level ${droneLevels[droneType]}`);
+  
+  // Deploy drones based on selections
+  updateActiveDrones();
+  
+  // Save state
+  localStorage.setItem('droneLevels', JSON.stringify(droneLevels));
   
   updateUI();
-  refreshDroneUpgrades();
+  updateDroneDisplayInBattle();
 }
 
-// Refresh drone upgrade buttons in battle
-function refreshDroneUpgrades() {
-  const container = document.getElementById('droneUpgrades');
-  if (!container) return;
+// Update which drones are actively deployed
+function updateActiveDrones() {
+  let deployed = [];
   
-  // Always make sure container is visible
+  // Debuff is independent
+  if (selectedDrones.debuff && droneLevels.debuff > 0) {
+    deployed = ['debuff'];
+    console.log('[DRONE] Deploying independent Debuff drone');
+  } else {
+    // Attack/Heal/Fortify can be combined
+    if (selectedDrones.attack && droneLevels.attack > 0) deployed.push('attack');
+    if (selectedDrones.heal && droneLevels.heal > 0) deployed.push('heal');
+    if (selectedDrones.fortify && droneLevels.fortify > 0) deployed.push('fortify');
+  }
+  
+  state.equippedDrones = deployed;
+  console.log('[DRONE] Active drones:', deployed);
+}
+
+// Update the battle screen drone display
+function updateDroneDisplayInBattle() {
+  const container = document.getElementById('droneUpgrades');
+  if (!container) {
+    console.log('[DRONE] droneUpgrades container not found');
+    return;
+  }
+  
+  // Show container
   container.style.display = 'block';
   
-  document.querySelectorAll('.droneUpgradeBtn').forEach(btn => {
-    const drone = btn.dataset.drone;
-    const level = droneLevels[drone];
-    const cost = droneCosts[drone];
-    const canAfford = state.coins >= cost;
-    
-    // Show button if drone hasn't reached max level
-    if (level < 5) {
-      btn.style.display = 'block';
-      btn.disabled = !canAfford;
-      btn.textContent = `${drone.charAt(0).toUpperCase() + drone.slice(1)} Lvl ${level} → ${level + 1} (${cost}c)`;
-      btn.style.opacity = canAfford ? '1' : '0.5';
-      btn.style.cursor = canAfford ? 'pointer' : 'not-allowed';
-    } else {
-      btn.style.display = 'none';
+  // Update all drone buttons
+  const buttons = {
+    debuff: container.querySelector('button[data-drone="debuff"]'),
+    attack: container.querySelector('button[data-drone="attack"]'),
+    heal: container.querySelector('button[data-drone="heal"]'),
+    fortify: container.querySelector('button[data-drone="fortify"]')
+  };
+  
+  for (const [droneType, btn] of Object.entries(buttons)) {
+    if (!btn) {
+      console.log(`[DRONE] Button for ${droneType} not found`);
+      continue;
     }
+    
+    const level = droneLevels[droneType];
+    const cost = droneCosts[droneType];
+    const canAfford = state.coins >= cost;
+    const isSelected = selectedDrones[droneType];
+    
+    // Always show button
+    btn.style.display = 'block';
+    
+    // Update text
+    const status = isSelected && level > 0 ? '✓ Equipped' : 'Buy/Upgrade';
+    btn.textContent = `${droneType.toUpperCase()} Lvl ${level} - ${status} (${cost}c)`;
+    
+    // Enable/disable based on affordability and selection
+    btn.disabled = !canAfford || (level >= 5);
+    btn.style.opacity = (canAfford && !btn.disabled) ? '1' : '0.5';
+    btn.style.cursor = (!btn.disabled) ? 'pointer' : 'not-allowed';
+    
+    // Attach click handler
+    btn.onclick = () => upgradeDrone(droneType);
+  }
+}
+
+// Load saved drone state
+function loadDroneState() {
+  const saved_levels = localStorage.getItem('droneLevels');
+  const saved_selected = localStorage.getItem('selectedDrones');
+  
+  if (saved_levels) {
+    droneLevels = JSON.parse(saved_levels);
+    console.log('[DRONE] Loaded drone levels:', droneLevels);
+  }
+  
+  if (saved_selected) {
+    selectedDrones = JSON.parse(saved_selected);
+    console.log('[DRONE] Loaded selected drones:', selectedDrones);
+  }
+  
+  // Sync checkboxes on home screen
+  document.querySelectorAll('.drone-checkbox').forEach(cb => {
+    cb.checked = selectedDrones[cb.dataset.drone];
   });
 }
 
-// Attach click handlers
-document.querySelectorAll('.droneUpgradeBtn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    upgradeDrone(btn.dataset.drone);
-  });
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    loadDroneState();
+    console.log('[DRONE] Drone system initialized');
+  }, 500);
 });
 
-// Load saved state on startup
-loadDroneState();
-refreshDroneUpgrades();
-
-</script>
-
-<script>
-const drLv = {d:0, a:0, h:0, f:0};
-const drCost = {d:50, a:50, h:75, f:100};
-
-function upgradeDrone(t) {
-  const k = t[0];
-  if (drLv[k] >= 5) return alert('Max level!');
-  if (state.coins >= drCost[k]) {
-    state.coins -= drCost[k];
-    drLv[k]++;
-    drCost[k] += (k === 'd' || k === 'a') ? 10 : 15;
-    document.getElementById(k + 'L').textContent = drLv[k];
-    document.getElementById(k + 'C').textContent = drCost[k];
-    updateCoinsDisplay();
-  } else alert('Need ' + drCost[k] + 'c!');
-}
-
+// Hook into the game's screen change function to update drones when entering battle
 const origShowScreen = window.showScreen || (() => {});
-window.showScreen = function(id) {
-  document.getElementById('droneUpgradesSection').style.display = (id === 'game') ? 'block' : 'none';
-  origShowScreen(id);
+window.showScreen = function(screenId) {
+  if (screenId === 'battle') {
+    console.log('[DRONE] Entering battle, updating drone display...');
+    setTimeout(() => {
+      updateDroneDisplayInBattle();
+      updateActiveDrones();
+    }, 100);
+  }
+  if (screenId === 'drones') {
+    loadDroneState();
+  }
+  return origShowScreen.call(this, screenId);
 };
-</script>
 
+// Also hook into updateUI to refresh drones every frame
+const orig_updateUI = window.updateUI || (() => {});
+window.updateUI = function() {
+  const result = orig_updateUI.call(this);
+  
+  // Update drone display if in battle
+  const battleScreen = document.getElementById('screen-battle');
+  if (battleScreen && battleScreen.style.display !== 'none') {
+    updateDroneDisplayInBattle();
+  }
+  
+  return result;
+};
+
+console.log('[DRONE] V1.2 system loaded');
+</script>
 </body>
 </html>
 // Calculate upgrade cost for drone level
